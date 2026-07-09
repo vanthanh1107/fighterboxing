@@ -1,6 +1,6 @@
 // ==========================================
-// CHAR_MESSI.JS - FIRST PERSON 3D EDITION
-// [BẢN CẬP NHẬT: NÉ BÓNG VÀ GĂNG TAY XANH DƯƠNG CHUẨN XÁC]
+// CHAR_MESSI.JS - CHIBI CARTOON EDITION
+// [NÂNG CẤP: DA THỊT COMIC, ÁO ARGENTINA, SỐ 10 TRÊN NGỰC]
 // ==========================================
 
 if (!window.cr7Balls) window.cr7Balls = [];
@@ -17,13 +17,11 @@ if (!window.cr7Hooked) {
                 let ball = window.cr7Balls[i];
                 ball.z -= ball.speed; ball.rotation += 0.5;
 
-                // Khi quả bóng bay áp sát mặt bạn (Z <= 20)
+                // Khi quả bóng bay áp sát mặt bạn
                 if (ball.z <= 20 && !ball.hasHit) {
                     ball.hasHit = true;
-                    
-                    // NẾU BẠN NÉ (Có iFrames) HOẶC BẠN LÙI LẠI RA KHỎI TẦM ĐÁNH CỦA BÓNG
                     if (window.playerFPS.iFrames > 0 || window.playerFPS.isDodging || window.enemyZ > 80) {
-                        window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2 - 80, text: "💨 NÉ BÓNG THÀNH CÔNG!", color: "#2ecc71", alpha: 1, vx: 0, vy: -2, font: "900 30px Arial", life: 40 });
+                        window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2 - 80, text: "💨 NÉ BÓNG!", color: "#2ecc71", alpha: 1, vx: 0, vy: -2, font: "900 30px Arial", life: 40 });
                         window.playSound(200, 'sine', 0.2, 0.4);
                     } else {
                         let damage = ball.dmg;
@@ -41,8 +39,6 @@ if (!window.cr7Hooked) {
                             window.playerFPS.hp = 0; window.gameOver = true; window.matchResolved = true; window.koGlitchTimer = 60;
                             window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2, text: "K.O! BÓNG VÀO MẶT!", color: "#ff4757", alpha: 1, vx: 0, vy: -1, font: "900 50px Arial", life: 180 });
                         }
-                        let hpRed = document.getElementById("hp-red");
-                        if(hpRed) hpRed.style.width = Math.max(0, (window.playerFPS.hp / window.playerFPS.maxHp * 100)) + "%";
                     }
                 }
                 if (ball.z < -100) window.cr7Balls.splice(i, 1);
@@ -103,31 +99,70 @@ window.currentLoadedChar = {
     drawMethod: function(ctx, p, bounce, ext, pext, isTrail) {
         let pts = typeof window.drawBaseLimbFPS === 'function' ? window.drawBaseLimbFPS(p) : window.drawBaseLimb(ctx, p, bounce, ext, pext, isTrail);
         let {head, neck, pelvis, shoulderL, shoulderR, footL, kneeL, footR, kneeR, handL, elbowL, handR, elbowR} = pts;
-        const drawLine = (start, end, width) => { ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke(); };
 
-        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.moveTo(shoulderL.x, shoulderL.y); ctx.lineTo(shoulderR.x, shoulderR.y); ctx.lineTo(pelvis.x + 15, pelvis.y); ctx.lineTo(pelvis.x - 15, pelvis.y); ctx.closePath(); ctx.fill(); 
-        
+        // 🌟 HÀM VẼ TAY CHÂN MẬP MẠP (COMIC STYLE)
+        const drawLimb = (start, end, width, color) => {
+            // Vẽ viền đen bên ngoài
+            ctx.lineWidth = width + 4; ctx.strokeStyle = "#111"; ctx.lineCap = "round";
+            ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+            // Vẽ màu lõi bên trong
+            ctx.lineWidth = width; ctx.strokeStyle = color;
+            ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+        };
+
+        // Vẽ Cánh tay (Da người)
+        let skinColor = "#f1c27d";
+        drawLimb(shoulderL, elbowL, 10, skinColor); drawLimb(elbowL, handL, 8, skinColor);
+        drawLimb(shoulderR, elbowR, 10, skinColor); drawLimb(elbowR, handR, 8, skinColor); 
+
+        // Vẽ Chân (Da đùi + Tất trắng)
+        drawLimb(pelvis, kneeL, 12, skinColor); drawLimb(kneeL, footL, 10, "#ffffff"); // Tất trắng
+        drawLimb(pelvis, kneeR, 12, skinColor); drawLimb(kneeR, footR, 10, "#ffffff"); // Tất trắng
+
+        // 🌟 VẼ QUẦN ĐÙI THỂ THAO
+        ctx.fillStyle = "#1e272e"; ctx.lineWidth = 3; ctx.strokeStyle = "#111";
+        ctx.beginPath();
+        ctx.moveTo(pelvis.x - 20, pelvis.y - 5);
+        ctx.lineTo(pelvis.x + 20, pelvis.y - 5);
+        ctx.lineTo(kneeR.x + 12, kneeR.y - 12);
+        ctx.lineTo(pelvis.x, pelvis.y + 15);
+        ctx.lineTo(kneeL.x - 12, kneeL.y - 12);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // 🌟 VẼ ÁO ĐẤU ARGENTINA
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(shoulderL.x - 8, shoulderL.y - 5);
+        ctx.lineTo(shoulderR.x + 8, shoulderR.y - 5);
+        ctx.lineTo(pelvis.x + 20, pelvis.y);
+        ctx.lineTo(pelvis.x - 20, pelvis.y);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // Sọc xanh dương trên áo
         ctx.fillStyle = "#74b9ff";
-        ctx.beginPath(); ctx.moveTo(shoulderL.x + 15, shoulderL.y); ctx.lineTo(shoulderL.x + 25, shoulderL.y); ctx.lineTo(pelvis.x + 5, pelvis.y); ctx.lineTo(pelvis.x - 5, pelvis.y); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(shoulderR.x - 25, shoulderR.y); ctx.lineTo(shoulderR.x - 15, shoulderR.y); ctx.lineTo(pelvis.x + 10, pelvis.y); ctx.lineTo(pelvis.x, pelvis.y); ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = "#111"; ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(shoulderL.x + 10, shoulderL.y - 5); ctx.lineTo(shoulderL.x + 22, shoulderL.y - 5); ctx.lineTo(pelvis.x + 10, pelvis.y); ctx.lineTo(pelvis.x, pelvis.y); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(shoulderR.x - 22, shoulderR.y - 5); ctx.lineTo(shoulderR.x - 10, shoulderR.y - 5); ctx.lineTo(pelvis.x, pelvis.y); ctx.lineTo(pelvis.x - 10, pelvis.y); ctx.fill();
 
-        ctx.strokeStyle = "#111"; drawLine(pelvis, kneeL, 8); drawLine(pelvis, kneeR, 8); 
-        ctx.strokeStyle = "#ecf0f1"; drawLine(kneeL, footL, 6); drawLine(kneeR, footR, 6);
+        // 🌟 VẼ SỐ 10 TRÊN NGỰC
+        let chestX = (shoulderL.x + shoulderR.x) / 2;
+        let chestY = (shoulderL.y + pelvis.y) / 2 - 5;
+        ctx.fillStyle = "#111"; 
+        ctx.font = "900 24px 'Teko', sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("10", chestX, chestY);
 
-        ctx.fillStyle = "#f1c40f"; ctx.strokeStyle = "#d35400"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(footL.x, footL.y, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(footR.x, footR.y, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        // 🌟 VẼ GIÀY VÀNG (GOLDEN BOOTS)
+        ctx.fillStyle = "#f1c40f"; ctx.strokeStyle = "#111"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(footL.x - 5, footL.y + 5, 14, 8, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(footR.x + 5, footR.y + 5, 14, 8, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
 
-        ctx.strokeStyle = "#74b9ff"; drawLine(shoulderL, elbowL, 7); drawLine(shoulderR, elbowR, 7); 
-        ctx.strokeStyle = "#ffeaa7"; drawLine(elbowL, handL, 5 * (handL.z || 1)); drawLine(elbowR, handR, 5 * (handR.z || 1)); 
-
+        // 🌟 VẼ GĂNG TAY 3D TỪ ẢNH
         const drawGlove = (handPt, color, isRight) => {
             ctx.save(); ctx.translate(handPt.x, handPt.y); ctx.scale(handPt.z || 1, handPt.z || 1); 
-            
-            // Tích hợp vẽ ảnh Găng tay
             if (window.enemyGloveImg && window.enemyGloveImg.complete) {
-                let gSize = 50; 
+                let gSize = 55; // Găng to ra một xíu cho hợp với phong cách Chibi
                 if (isRight) ctx.scale(-1, 1);
                 ctx.drawImage(window.enemyGloveImg, -gSize/2, -gSize/2, gSize, gSize);
             } else {
