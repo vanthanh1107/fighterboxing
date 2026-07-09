@@ -462,13 +462,16 @@ body {
     background-size: contain; 
     background-repeat: no-repeat; 
     background-position: center;
-    transition: transform 0.12s cubic-bezier(0.1, 0.9, 0.2, 1), filter 0.2s;
+    
+    /* 🌟 QUAN TRỌNG: Thêm phép toán cộng hưởng biến để găng tay tự tịnh tiến theo địch */
+    transition: transform 0.08s cubic-bezier(0.1, 0.8, 0.2, 1), filter 0.2s;
+    
     filter: drop-shadow(0 25px 20px rgba(0,0,0,0.8)); 
     z-index: 100; 
     pointer-events: none;
 }
 
-/* 🌟 CẲNG TAY VÀ BĂNG QUẤN 3D 🌟 */
+/* CẢNG TAY VÀ BĂNG QUẤN KHỐI 3D */
 .fps-glove::after {
     content: '';
     position: absolute;
@@ -485,30 +488,35 @@ body {
                 0 15px 15px rgba(0,0,0,0.5);
 }
 
-/* Tư thế thủ tiêu chuẩn 3D */
-.left-glove { left: 2%; transform: perspective(600px) rotateX(40deg) rotateY(15deg) rotateZ(10deg); }
-.right-glove { right: 2%; transform: perspective(600px) rotateX(40deg) rotateY(-15deg) rotateZ(-10deg) scaleX(-1); }
+/* 🌟 TƯ THẾ THỦ: Tự động cộng hưởng tịnh tiến X (`--enemy-offset-x`) và quẹo cổ tay (`--enemy-tilt-rad`) */
+.left-glove { 
+    left: 2%; 
+    transform: perspective(600px) translate(var(--enemy-offset-x, 0px), 0px) rotateX(40deg) rotateY(15deg) rotateZ(calc(10deg + var(--enemy-tilt-rad, 0rad))); 
+}
+.right-glove { 
+    right: 2%; 
+    transform: perspective(600px) translate(var(--enemy-offset-x, 0px), 0px) rotateX(40deg) rotateY(-15deg) rotateZ(calc(-10deg + var(--enemy-tilt-rad, 0rad))) scaleX(-1); 
+}
 
-/* Lật màu đổ bóng cẳng tay phải */
 .right-glove::after { background: linear-gradient(to left, #8b5a2b, #d29961, #f1c27d, #b87333); }
 
-/* Khi ra đòn đấm */
+/* Khi ra đòn đấm (Lao vun vút chĩa thẳng vào mặt địch cho dù địch lướt sang phải) */
 .glove-punch-left { 
-    transform: perspective(600px) translate(100px, -220px) rotateX(15deg) rotateY(5deg) scale(0.7) !important; 
+    transform: perspective(600px) translate(calc(100px + var(--enemy-offset-x, 0px)), -220px) rotateX(15deg) rotateY(5deg) scale(0.7) !important; 
     filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)) !important; 
 }
 .glove-punch-right { 
-    transform: perspective(600px) translate(-100px, -220px) rotateX(15deg) rotateY(-5deg) scaleX(-1) scale(0.7) !important; 
+    transform: perspective(600px) translate(calc(-100px + var(--enemy-offset-x, 0px)), -220px) rotateX(15deg) rotateY(-5deg) scaleX(-1) scale(0.7) !important; 
     filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)) !important; 
 }
 
-/* Khi đỡ đòn */
+/* Khi đỡ đòn (Tay cũng tự động nghiêng theo địch) */
 .glove-block-left { 
-    transform: perspective(600px) translate(80px, -120px) rotateX(10deg) rotateZ(40deg) scale(1.1) !important; 
+    transform: perspective(600px) translate(calc(80px + var(--enemy-offset-x, 0px)), -120px) rotateX(10deg) rotateZ(40deg) scale(1.1) !important; 
     filter: drop-shadow(0 0 30px rgba(0,243,255,0.7)) !important; 
 }
 .glove-block-right { 
-    transform: perspective(600px) translate(-80px, -120px) rotateX(10deg) rotateZ(-40deg) scaleX(-1) scale(1.1) !important; 
+    transform: perspective(600px) translate(calc(-80px + var(--enemy-offset-x, 0px)), -120px) rotateX(10deg) rotateZ(-40deg) scaleX(-1) scale(1.1) !important; 
     filter: drop-shadow(0 0 30px rgba(0,243,255,0.7)) !important; 
 }
 
@@ -540,6 +548,7 @@ body {
         box-shadow: inset 0 20px 0 #bdc3c7, inset 0 25px 5px rgba(0,0,0,0.5); 
     }
     
-    .glove-punch-left { transform: perspective(600px) translate(60px, -150px) rotateX(10deg) scale(0.8) !important; }
-    .glove-punch-right { transform: perspective(600px) translate(-60px, -150px) rotateX(10deg) scaleX(-1) scale(0.8) !important; }
+    /* Đảm bảo đấm trên điện thoại cũng áp dụng biến offset */
+    .glove-punch-left { transform: perspective(600px) translate(calc(60px + var(--enemy-offset-x, 0px)), -150px) rotateX(10deg) scale(0.8) !important; }
+    .glove-punch-right { transform: perspective(600px) translate(calc(-60px + var(--enemy-offset-x, 0px)), -150px) rotateX(10deg) scaleX(-1) scale(0.8) !important; }
 }
