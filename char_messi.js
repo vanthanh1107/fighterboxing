@@ -1,6 +1,6 @@
 // ==========================================
 // CHAR_MESSI.JS - FIRST PERSON 3D EDITION
-// [BẢN CẬP NHẬT NÉ BÓNG VÀ KHOẢNG CÁCH THỰC TẾ]
+// [BẢN CẬP NHẬT: NÉ BÓNG VÀ GĂNG TAY XANH DƯƠNG CHUẨN XÁC]
 // ==========================================
 
 if (!window.cr7Balls) window.cr7Balls = [];
@@ -81,6 +81,7 @@ if (!window.cr7Hooked) {
 window.currentLoadedChar = {
     id: "messi", className: "Messi", hp: 1000, speed: 9.0, dmgMod: 1.4, color: "#0984e3", scale: 0.9, 
     avatarUrl: "https://i.ibb.co/GvCyKPj7/Generated-Image-July-05-2026-9-20-PM.jpg",
+    gloveUrl: "https://cdn-icons-png.flaticon.com/512/8145/8145417.png", // Găng tay Xanh Dương
     
     executeUltimate: function(caster, target, baseDmg) {
         caster.state = 'dash_back'; caster.attackTimer = 60; window.enemyZ = 250; 
@@ -121,14 +122,26 @@ window.currentLoadedChar = {
         ctx.strokeStyle = "#74b9ff"; drawLine(shoulderL, elbowL, 7); drawLine(shoulderR, elbowR, 7); 
         ctx.strokeStyle = "#ffeaa7"; drawLine(elbowL, handL, 5 * (handL.z || 1)); drawLine(elbowR, handR, 5 * (handR.z || 1)); 
 
-        const drawGlove = (handPt, color) => {
+        const drawGlove = (handPt, color, isRight) => {
             ctx.save(); ctx.translate(handPt.x, handPt.y); ctx.scale(handPt.z || 1, handPt.z || 1); 
-            ctx.shadowBlur = 10; ctx.shadowColor = color; ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); 
-            ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill(); ctx.restore();
+            
+            // Tích hợp vẽ ảnh Găng tay
+            if (window.enemyGloveImg && window.enemyGloveImg.complete) {
+                let gSize = 50; 
+                if (isRight) ctx.scale(-1, 1);
+                ctx.drawImage(window.enemyGloveImg, -gSize/2, -gSize/2, gSize, gSize);
+            } else {
+                ctx.shadowBlur = 10; ctx.shadowColor = color; ctx.fillStyle = color;
+                ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); 
+                ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill(); 
+            }
+            ctx.restore();
         };
 
-        if (!isTrail) { drawGlove(handL, "#0984e3"); drawGlove(handR, "#ff4757"); }
+        if (!isTrail) { 
+            drawGlove(handL, "#0984e3", false); 
+            drawGlove(handR, "#0984e3", true); 
+        }
     }
 };
 
