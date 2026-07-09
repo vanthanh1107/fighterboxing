@@ -1,6 +1,6 @@
 // ==========================================
-// RECORDER.JS - FIRST-PERSON 3D EDITION
-// [BẢN NÂNG CẤP ĐẶC BIỆT: TỰ ĐỘNG BẮT CHUYỂN ĐỘNG GĂNG TAY 3D VÀO VIDEO]
+// RECORDER.JS - AUTO-BATTLER CINEMATIC EDITION
+// [TỰ ĐỘNG VẼ CẢ GĂNG TAY LẪN CẲNG TAY VÀO VIDEO TẢI VỀ]
 // ==========================================
 
 window.mediaRecorderH = null; window.recordedChunksH = []; window.recordCanvasH = null; window.recordCtxH = null;
@@ -12,24 +12,19 @@ window.currentVideoExt = "webm";
 window.savedVideos = [];
 window.bgmSourceNode = null;
 
-// TẢI TRƯỚC ẢNH GĂNG TAY VÀ NỨT MÀN HÌNH ĐỂ GHI HÌNH KHÔNG BỊ GIẬT
+// TẢI TRƯỚC ẢNH NỨT MÀN HÌNH
 window.fpsAssets = {
-    glove: new Image(),
     crack: new Image()
 };
-window.fpsAssets.glove.crossOrigin = "Anonymous";
-window.fpsAssets.glove.src = 'https://cdn-icons-png.flaticon.com/512/7510/7510619.png';
 window.fpsAssets.crack.crossOrigin = "Anonymous";
 window.fpsAssets.crack.src = 'https://cdn-icons-png.flaticon.com/512/3295/3295055.png';
 
 window.initRecorder = function() {
-    // KHỞI TẠO CANVAS NGANG (1920x1080)
     if (!document.getElementById("hiddenRecordCanvasH")) {
         window.recordCanvasH = document.createElement("canvas"); window.recordCanvasH.id = "hiddenRecordCanvasH"; window.recordCanvasH.width = 1920; window.recordCanvasH.height = 1080;
         window.recordCanvasH.style.cssText = "position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -9999;";
         document.body.appendChild(window.recordCanvasH); window.recordCtxH = window.recordCanvasH.getContext("2d");
     }
-    // KHỞI TẠO CANVAS DỌC (1080x1920)
     if (!document.getElementById("hiddenRecordCanvasV")) {
         window.recordCanvasV = document.createElement("canvas"); window.recordCanvasV.id = "hiddenRecordCanvasV"; window.recordCanvasV.width = 1080; window.recordCanvasV.height = 1920;
         window.recordCanvasV.style.cssText = "position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -9999;";
@@ -156,7 +151,7 @@ window.captureFrames = function() {
         ctxH.globalAlpha = 1.0; ctxV.globalAlpha = 1.0;
     }
 
-    // === 3. VẼ GĂNG TAY ĐẤM BỐC 3D (Đọc từ CSS Animation) ===
+    // === 3. VẼ GĂNG TAY ĐẤM BỐC 3D (Có cánh tay và Băng quấn) ===
     let leftGlove = document.getElementById("left-glove");
     let rightGlove = document.getElementById("right-glove");
     
@@ -166,7 +161,21 @@ window.captureFrames = function() {
     let isBlockR = rightGlove && rightGlove.classList.contains("glove-block-right");
 
     const drawGloveImage = (ctx, isH, isLeft, state) => {
-        if (!window.fpsAssets.glove.complete) return;
+        // Lấy link ảnh từ thẻ DIV ngoài giao diện (Chỗ bạn chọn tướng)
+        let gloveEl = isLeft ? document.getElementById("left-glove") : document.getElementById("right-glove");
+        if (!gloveEl) return;
+        
+        let bgImgStyle = window.getComputedStyle(gloveEl).backgroundImage;
+        let url = bgImgStyle !== 'none' ? bgImgStyle.slice(5, -2).replace(/"/g, "") : 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
+
+        if (!window.hudImages) window.hudImages = {};
+        let myGloveObj = window.hudImages[url];
+        if (!myGloveObj) {
+            myGloveObj = new Image(); myGloveObj.crossOrigin = "Anonymous"; myGloveObj.src = url;
+            window.hudImages[url] = myGloveObj;
+            return; // Đợi load xong mới vẽ
+        }
+
         ctx.save();
         
         // Cấu hình toạ độ giả lập CSS Perspective cho Video
@@ -175,9 +184,9 @@ window.captureFrames = function() {
         if (isH) {
             size = 650; // Bản ngang: Găng tay rất to
             if (isLeft) {
-                if (state === 'punch') { x = 650; y = 300; size = 400; rot = 0; } // Vươn tới giữa
-                else if (state === 'block') { x = 550; y = 500; rot = 35; ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; } // Chéo đỡ mặt
-                else { x = -50; y = 700; rot = 15; } // Ở góc chờ
+                if (state === 'punch') { x = 650; y = 300; size = 400; rot = 0; } 
+                else if (state === 'block') { x = 550; y = 500; rot = 35; ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; } 
+                else { x = -50; y = 700; rot = 15; } 
             } else {
                 scaleX = -1; // Lật ảnh cho tay phải
                 if (state === 'punch') { x = 1270; y = 300; size = 400; rot = 0; }
@@ -202,11 +211,32 @@ window.captureFrames = function() {
         ctx.scale(scaleX, scaleY);
         ctx.rotate(rot * Math.PI / 180);
         
-        // Đổ bóng cho găng tay
         if (state !== 'block') { ctx.shadowBlur = 25; ctx.shadowColor = "rgba(0,0,0,0.8)"; } 
         
-        // Vẽ ảnh PNG găng tay đấm bốc thật!
-        ctx.drawImage(window.fpsAssets.glove, 0, 0, size, size);
+        // --- BẮT ĐẦU VẼ CẲNG TAY DA NGƯỜI VÀO VIDEO ---
+        ctx.save();
+        let armWidth = size * 0.4;
+        let armLength = size * 0.8;
+        let armGrad = ctx.createLinearGradient(size/2 - armWidth/2, 0, size/2 + armWidth/2, 0);
+        armGrad.addColorStop(0, "#8b5a2b"); armGrad.addColorStop(0.5, "#f1c27d"); armGrad.addColorStop(1, "#b87333");
+        
+        ctx.fillStyle = armGrad;
+        ctx.beginPath();
+        ctx.moveTo(size/2 - armWidth/2 + 20, size * 0.6); 
+        ctx.lineTo(size/2 + armWidth/2 - 20, size * 0.6); 
+        ctx.lineTo(size/2 + armWidth/2 + 10, size * 0.6 + armLength); 
+        ctx.lineTo(size/2 - armWidth/2 - 10, size * 0.6 + armLength); 
+        ctx.fill();
+
+        // BĂNG QUẤN CỔ TAY (Wrist Tape)
+        ctx.fillStyle = "#bdc3c7";
+        ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.6, armWidth - 36, size * 0.15);
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.7, armWidth - 36, size * 0.05);
+        ctx.restore();
+
+        // Vẽ ảnh Găng tay đè lên trên (Găng đỏ, Găng xanh tùy nhân vật)
+        ctx.drawImage(myGloveObj, 0, 0, size, size);
         ctx.restore();
     };
 
@@ -222,7 +252,6 @@ window.captureFrames = function() {
     let vignetteV = ctxV.createRadialGradient(540, 960, 400, 540, 960, 1000); vignetteV.addColorStop(0, 'rgba(0,0,0,0)'); vignetteV.addColorStop(1, 'rgba(0,0,0,0.8)');
     ctxV.fillStyle = vignetteV; ctxV.fillRect(0, 420, 1080, 1080);
 
-    if (!window.hudImages) window.hudImages = {};
     const getHudImg = (url) => { if (!url) return null; if (window.hudImages[url] && window.hudImages[url].complete && window.hudImages[url].naturalWidth > 0) return window.hudImages[url]; if (!window.hudImages[url]) { let img = new Image(); img.crossOrigin = "Anonymous"; img.src = url; window.hudImages[url] = img; } return null; };
 
     if (window.playerFPS && window.enemies && window.enemies[0] && !window.gameOver) {
