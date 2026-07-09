@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - AUTO-BATTLER CINEMATIC EDITION
-// [TÍNH NĂNG: GĂNG TAY ĐỔI MÀU THEO TƯỚNG & RANDOM KẺ ĐỊCH]
+// MAIN.JS - AUTO-BATTLER CINEMATIC EDITION (V12.0)
+// [TÍNH NĂNG: GĂNG TAY ĐỔI MÀU & ĐỔI ẢNH THEO TƯỚNG, KẺ ĐỊCH RANDOM]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -12,6 +12,7 @@ window.loadedCharacters = {};
 window.enemyZ = 120; 
 window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBlocking: false, attackCooldown: 0 };
 window.enemyFaceImg = new Image(); 
+window.enemyGloveImg = new Image(); // Biến chứa găng tay của địch
 
 // ==========================================
 // 1. KHỞI TẠO VÀ CHỌN TƯỚNG TẠI MENU
@@ -60,6 +61,11 @@ window.renderCharacterGrid = function() {
             window.enemyFaceImg.crossOrigin = "Anonymous";
             window.enemyFaceImg.src = activeItem.avatarUrl;
 
+            // Load ảnh găng tay ngoài sảnh (Tùy chọn hiển thị)
+            let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
+            window.enemyGloveImg.crossOrigin = "Anonymous";
+            window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
+
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:10px; text-align: left;">
                     <span style="font-size:24px; color:#f1c40f; font-weight:900; text-transform: uppercase;">${activeItem.className}</span>
@@ -94,21 +100,18 @@ window.backToMenu = function() {
 window.startGame = async function() { 
     if(!window.selectedRedClass) return;
     
-    // Tắt Live preview ngoài sảnh
     window.isPreviewRunning = false; 
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
     let game = document.getElementById("game-screen"); if(game) game.style.display = "block"; 
     
-    // Bật nhạc nền ngẫu nhiên
     if (window.bgmBase) { window.bgmBase.pause(); }
     window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
     window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
 
     await window.matchStartFPS(); 
     
-    // Bắt đầu vòng lặp game chính
     if (!window.isLoopRunning) { 
         window.isLoopRunning = true; 
         requestAnimationFrame(window.gameLoopFPS); 
@@ -116,80 +119,73 @@ window.startGame = async function() {
 }
 
 window.matchStartFPS = async function() {
-    window.gameOver = false;
-    window.matchResolved = false;
-    window.enemyZ = 120; // Bắt đầu ở khoảng cách an toàn
+    window.gameOver = false; window.matchResolved = false; window.enemyZ = 120; 
     window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBlocking: false, attackCooldown: 0 };
     
-    // 🌟 TỰ ĐỘNG LOAD MAP NGẪU NHIÊN CHO VÕ ĐÀI
+    // Tự động load Map
     if (window.MAPS && window.MAPS.length > 0) {
         window.currentMap = window.MAPS[Math.floor(Math.random() * window.MAPS.length)];
         window.currentWeather = window.currentMap.weather || 'none';
-        
-        window.weatherParticles = [];
-        let ptCount = (window.currentWeather === 'none') ? 0 : 150; 
-        for(let i=0; i<ptCount; i++) { 
-            window.weatherParticles.push({ 
-                x: Math.random() * 800, 
-                y: Math.random() * 500, 
-                speed: (window.currentWeather === 'rain') ? 12 + Math.random() * 10 : 2 + Math.random() * 3, 
-                size: Math.random() * 3 + 1, ang: Math.random() * Math.PI * 2 
-            }); 
-        }
+        window.weatherParticles = []; let ptCount = (window.currentWeather === 'none') ? 0 : 150; 
+        for(let i=0; i<ptCount; i++) { window.weatherParticles.push({ x: Math.random() * 800, y: Math.random() * 500, speed: (window.currentWeather === 'rain') ? 12 + Math.random() * 10 : 2 + Math.random() * 3, size: Math.random() * 3 + 1, ang: Math.random() * Math.PI * 2 }); }
     }
 
-    // 🌟 TÔ MÀU GĂNG TAY DỰA TRÊN NHÂN VẬT BẠN ĐÃ CHỌN
-    let myChar = window.classStats[window.selectedRedClass];
-    let myColor = myChar.color || "#00f3ff";
-    // Phủ lớp Shadow Neon phát sáng theo màu nhân vật
-    document.getElementById('left-glove').style.filter = `drop-shadow(0 25px 20px ${myColor})`;
-    document.getElementById('right-glove').style.filter = `drop-shadow(0 25px 20px ${myColor})`;
-
-    // 🌟 TÌM KẺ ĐỊCH NGẪU NHIÊN TỪ DANH SÁCH (BỐC THĂM)
+    // TÌM KẺ ĐỊCH NGẪU NHIÊN TỪ DANH SÁCH
     let allKeys = Object.keys(window.classStats);
     let randomEnemyId = allKeys[Math.floor(Math.random() * allKeys.length)];
-    
     await window.loadCharacterDynamic(randomEnemyId);
     let s2 = window.classStats[randomEnemyId]; 
     let eHp = s2.hp || 1000;
     
-    // Khởi tạo Kẻ địch ở giữa màn hình (X = 400)
     window.enemies = [{ 
-        id: "enemy_fps", classId: randomEnemyId, isPlayer: false, 
-        x: 400, y: window.GROUND_Y, 
-        vx: 0, vy: 0, speed: s2.speed || 5, color: s2.color || "#ff003c", 
-        hp: eHp, maxHp: eHp, dmgMod: s2.dmgMod || 1, scale: s2.scale || 1, 
+        id: "enemy_fps", classId: randomEnemyId, isPlayer: false, x: 400, y: window.GROUND_Y, 
+        vx: 0, vy: 0, speed: s2.speed || 5, color: s2.color || "#ff003c", hp: eHp, maxHp: eHp, dmgMod: s2.dmgMod || 1, scale: s2.scale || 1, 
         onGround: true, isFacingRight: false, state: 'idle', attackTimer: 0, hitStun: 0, 
         className: s2.className, avatarUrl: s2.avatarUrl, drawMethod: s2.drawMethod
     }];
     
-    // Cập nhật tên BẠN và ĐỐI THỦ lên màn hình HUD
-    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + s2.className;
-    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + myChar.className; 
+    // 🌟 GĂNG TAY ĐỘNG: LẤY ẢNH GĂNG TAY TỪ NHÂN VẬT BẠN ĐÃ CHỌN (GÓC NHÌN FPS)
+    let myChar = window.classStats[window.selectedRedClass];
+    let myColor = myChar.color || "#ff003c";
+    let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png'; // Găng đỏ mặc định
+    let myGloveUrl = myChar.gloveUrl || defaultGlove;
     
-    // Tải ảnh mặt của ĐỐI THỦ để dán lên Stickman
+    // Thay đổi ảnh Background của găng tay trái/phải trên màn hình UI
+    let leftGloveEl = document.getElementById('left-glove');
+    let rightGloveEl = document.getElementById('right-glove');
+    if (leftGloveEl && rightGloveEl) {
+        leftGloveEl.style.backgroundImage = `url('${myGloveUrl}')`;
+        rightGloveEl.style.backgroundImage = `url('${myGloveUrl}')`;
+        leftGloveEl.style.filter = `drop-shadow(0 25px 20px ${myColor})`;
+        rightGloveEl.style.filter = `drop-shadow(0 25px 20px ${myColor})`;
+    }
+
+    // 🌟 TẢI MẶT VÀ GĂNG TAY CỦA KẺ ĐỊCH (ĐỂ VẼ LÊN VÕ ĐÀI 3D)
+    window.enemyFaceImg = new Image();
     window.enemyFaceImg.crossOrigin = "Anonymous";
     window.enemyFaceImg.src = s2.avatarUrl; 
     
-    // Reset thanh máu
-    let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); 
-    if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
+    window.enemyGloveImg = new Image(); 
+    window.enemyGloveImg.crossOrigin = "Anonymous";
+    window.enemyGloveImg.src = s2.gloveUrl || defaultGlove;
+
+    // Cập nhật HUD Tên và Máu
+    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + s2.className;
+    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + myChar.className; 
+    let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
-    
-    // Tự động quay màn hình nếu bật
     if (typeof window.startRecording === 'function') window.startRecording();
 }
 
 // ==========================================
-// 3. CÁC HÀM ACTION (AI SẼ GỌI CÁC HÀM NÀY)
+// 3. CÁC HÀM ACTION (AI SẼ GỌI CÁC HÀM NÀY ĐỂ TỰ ĐÁNH)
 // ==========================================
 window.punch = function(hand) {
     if (window.playerFPS.attackCooldown > 0 || window.gameOver || window.playerFPS.isDodging || window.playerFPS.isBlocking) return;
     window.playerFPS.attackCooldown = 15;
     window.playerFPS.stamina -= 10;
     
-    // Kích hoạt CSS vung găng tay
     let glove = document.getElementById(hand + "-glove");
     if(glove) {
         glove.classList.add(`glove-punch-${hand}`);
@@ -203,7 +199,7 @@ window.punch = function(hand) {
         let dmg = 45 * (isCrit ? 2 : 1);
         
         e.hp -= dmg; e.state = 'hurt'; e.hitStun = 20; e.attackTimer = 0;
-        window.enemyZ += 20; // Bị đấm lùi lại
+        window.enemyZ += 20; 
         
         if(typeof window.shakeScreen === 'function') window.shakeScreen(isCrit ? 15 : 8, isCrit ? 10 : 5);
         if(typeof window.spawnParticles === 'function') window.spawnParticles(e.x, e.y - 60, "#ff003c", isCrit);
@@ -231,12 +227,10 @@ window.blockFPS = function() {
         document.removeEventListener('mouseup', releaseBlock);
         document.removeEventListener('touchend', releaseBlock);
     };
-    // Gắn sự kiện nhả tay để hạ khiên
     document.addEventListener('mouseup', releaseBlock);
     document.addEventListener('touchend', releaseBlock);
 };
 
-// AI vẫn dùng hàm này để thỉnh thoảng né tránh tự động
 window.dodgeFPS = function() {
     if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver) return;
     window.playerFPS.isDodging = true; window.playerFPS.stamina -= 20;
@@ -275,7 +269,7 @@ window.startPreviewLoop = function(charStats) {
             if(charStats.drawMethod) charStats.drawMethod(pCtx, fakeChar, 0, 0, 0, false);
             else if(typeof window.drawStickman === 'function') window.drawStickman(pCtx, fakeChar);
             
-            // Dán mặt bạn lên nhân vật
+            // Dán mặt bạn lên nhân vật ngoài sảnh
             if (window.enemyFaceImg && window.enemyFaceImg.complete) {
                 pCtx.save(); pCtx.beginPath(); pCtx.arc(0, -135, 30, 0, Math.PI*2); pCtx.clip();
                 pCtx.drawImage(window.enemyFaceImg, -30, -165, 60, 60); pCtx.restore();
