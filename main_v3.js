@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - FIRST-PERSON BRAWLER EDITION
-// [ĐÃ FIX LỖI: TỰ ĐỘNG LOAD MAP VÀ CĂN GIỮA CAMERA]
+// MAIN.JS - AUTO-BATTLER CINEMATIC EDITION
+// [TÍNH NĂNG: GĂNG TAY ĐỔI MÀU THEO TƯỚNG & RANDOM KẺ ĐỊCH]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -13,6 +13,9 @@ window.enemyZ = 120;
 window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBlocking: false, attackCooldown: 0 };
 window.enemyFaceImg = new Image(); 
 
+// ==========================================
+// 1. KHỞI TẠO VÀ CHỌN TƯỚNG TẠI MENU
+// ==========================================
 window.loadCharacterDynamic = function(charId) {
     return new Promise((resolve) => {
         if (window.classStats && window.classStats[charId]) {
@@ -33,19 +36,27 @@ window.initGame = async function() {
 }
 
 window.renderCharacterGrid = function() {
-    const carousel = document.getElementById("character-carousel"); if(!carousel) return; carousel.innerHTML = ""; let firstCardId = null;
+    const carousel = document.getElementById("character-carousel"); 
+    if(!carousel) return; 
+    carousel.innerHTML = ""; 
+    let firstCardId = null;
     
     for (let id in window.classStats) {
-        let item = window.classStats[id]; let card = document.createElement("div"); card.className = "char-card"; 
+        let item = window.classStats[id]; 
+        let card = document.createElement("div"); 
+        card.className = "char-card"; 
         card.innerHTML = `<div class="char-avatar"><img src="${item.avatarUrl || 'https://api.dicebear.com/7.x/adventurer/png?seed=error'}"></div><div class="char-name">${item.className || 'Unknown'}</div>`;
         
         card.onclick = async () => { 
-            window.selectedRedClass = id; document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected')); card.classList.add('selected'); 
+            window.selectedRedClass = id; 
+            document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected')); 
+            card.classList.add('selected'); 
+            
             let desc = document.getElementById("desc-red");
             await window.loadCharacterDynamic(id);
             let activeItem = window.classStats[id];
             
-            // Tải ảnh khuôn mặt
+            // Tải ảnh khuôn mặt của bạn để hiển thị ngoài sảnh (Menu Preview)
             window.enemyFaceImg.crossOrigin = "Anonymous";
             window.enemyFaceImg.src = activeItem.avatarUrl;
 
@@ -53,17 +64,25 @@ window.renderCharacterGrid = function() {
                 <div style="display:flex; flex-direction:column; gap:10px; text-align: left;">
                     <span style="font-size:24px; color:#f1c40f; font-weight:900; text-transform: uppercase;">${activeItem.className}</span>
                     <span style="color:#fff;">❤️ Máu: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
-                    <span style="color:#fff;">💨 Tốc độ rê: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
-                    <span style="color:#fff;">⚠️ Cảnh báo: Sẽ áp sát đấm bạn!</span>
+                    <span style="color:#fff;">💨 Tốc độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
+                    <span style="color:#00f3ff; font-weight: bold; margin-top: 5px;">🤖 AI SẼ TỰ ĐỘNG CHIẾN ĐẤU THAY BẠN!</span>
                 </div>`; 
             
             window.startPreviewLoop(activeItem);
         };
-        carousel.appendChild(card); if (!firstCardId) { firstCardId = id; }
+        carousel.appendChild(card); 
+        if (!firstCardId) { firstCardId = id; }
     }
-    if(!window.selectedRedClass && firstCardId) { let firstCard = carousel.querySelector(`.char-card`); if(firstCard) firstCard.click(); }
+    // Tự động click chọn nhân vật đầu tiên khi vừa load game
+    if(!window.selectedRedClass && firstCardId) { 
+        let firstCard = carousel.querySelector(`.char-card`); 
+        if(firstCard) firstCard.click(); 
+    }
 }
 
+// ==========================================
+// 2. CHUYỂN CẢNH & SET UP TRẬN ĐẤU (AUTO-BATTLER)
+// ==========================================
 window.backToMenu = function() { 
     if (typeof window.stopRecording === 'function') window.stopRecording();
     let game = document.getElementById("game-screen"); if(game) game.style.display = "none"; 
@@ -74,32 +93,39 @@ window.backToMenu = function() {
 
 window.startGame = async function() { 
     if(!window.selectedRedClass) return;
+    
+    // Tắt Live preview ngoài sảnh
     window.isPreviewRunning = false; 
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
     let game = document.getElementById("game-screen"); if(game) game.style.display = "block"; 
     
+    // Bật nhạc nền ngẫu nhiên
     if (window.bgmBase) { window.bgmBase.pause(); }
     window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
     window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
 
     await window.matchStartFPS(); 
-    if (!window.isLoopRunning) { window.isLoopRunning = true; requestAnimationFrame(window.gameLoopFPS); } 
+    
+    // Bắt đầu vòng lặp game chính
+    if (!window.isLoopRunning) { 
+        window.isLoopRunning = true; 
+        requestAnimationFrame(window.gameLoopFPS); 
+    } 
 }
 
 window.matchStartFPS = async function() {
     window.gameOver = false;
     window.matchResolved = false;
-    window.enemyZ = 120; 
+    window.enemyZ = 120; // Bắt đầu ở khoảng cách an toàn
     window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBlocking: false, attackCooldown: 0 };
     
-    // FIX: TỰ ĐỘNG CHỌN MAP ĐỂ VẼ VÕ ĐÀI
+    // 🌟 TỰ ĐỘNG LOAD MAP NGẪU NHIÊN CHO VÕ ĐÀI
     if (window.MAPS && window.MAPS.length > 0) {
         window.currentMap = window.MAPS[Math.floor(Math.random() * window.MAPS.length)];
         window.currentWeather = window.currentMap.weather || 'none';
         
-        // Khởi tạo thời tiết
         window.weatherParticles = [];
         let ptCount = (window.currentWeather === 'none') ? 0 : 150; 
         for(let i=0; i<ptCount; i++) { 
@@ -112,36 +138,58 @@ window.matchStartFPS = async function() {
         }
     }
 
-    let s2 = window.classStats[window.selectedRedClass];
+    // 🌟 TÔ MÀU GĂNG TAY DỰA TRÊN NHÂN VẬT BẠN ĐÃ CHỌN
+    let myChar = window.classStats[window.selectedRedClass];
+    let myColor = myChar.color || "#00f3ff";
+    // Phủ lớp Shadow Neon phát sáng theo màu nhân vật
+    document.getElementById('left-glove').style.filter = `drop-shadow(0 25px 20px ${myColor})`;
+    document.getElementById('right-glove').style.filter = `drop-shadow(0 25px 20px ${myColor})`;
+
+    // 🌟 TÌM KẺ ĐỊCH NGẪU NHIÊN TỪ DANH SÁCH (BỐC THĂM)
+    let allKeys = Object.keys(window.classStats);
+    let randomEnemyId = allKeys[Math.floor(Math.random() * allKeys.length)];
+    
+    await window.loadCharacterDynamic(randomEnemyId);
+    let s2 = window.classStats[randomEnemyId]; 
     let eHp = s2.hp || 1000;
     
-    // FIX: X = 400 ĐỂ KẺ ĐỊCH LUÔN ĐỨNG GIỮA MÀN HÌNH
+    // Khởi tạo Kẻ địch ở giữa màn hình (X = 400)
     window.enemies = [{ 
-        id: "enemy_fps", classId: window.selectedRedClass, isPlayer: false, 
+        id: "enemy_fps", classId: randomEnemyId, isPlayer: false, 
         x: 400, y: window.GROUND_Y, 
-        vx: 0, vy: 0, speed: s2.speed || 5, 
-        color: s2.color || "#ff003c", hp: eHp, maxHp: eHp, dmgMod: s2.dmgMod || 1, scale: s2.scale || 1, 
+        vx: 0, vy: 0, speed: s2.speed || 5, color: s2.color || "#ff003c", 
+        hp: eHp, maxHp: eHp, dmgMod: s2.dmgMod || 1, scale: s2.scale || 1, 
         onGround: true, isFacingRight: false, state: 'idle', attackTimer: 0, hitStun: 0, 
-        className: s2.className, avatarUrl: s2.avatarUrl,
-        drawMethod: s2.drawMethod
+        className: s2.className, avatarUrl: s2.avatarUrl, drawMethod: s2.drawMethod
     }];
     
-    let nb = document.getElementById("name-display-blue");
-    if(nb) nb.innerText = "🤖 " + s2.className;
+    // Cập nhật tên BẠN và ĐỐI THỦ lên màn hình HUD
+    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + s2.className;
+    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + myChar.className; 
     
-    // Đặt máu bạn lên HUD
-    let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue");
+    // Tải ảnh mặt của ĐỐI THỦ để dán lên Stickman
+    window.enemyFaceImg.crossOrigin = "Anonymous";
+    window.enemyFaceImg.src = s2.avatarUrl; 
+    
+    // Reset thanh máu
+    let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); 
     if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
+    
+    // Tự động quay màn hình nếu bật
     if (typeof window.startRecording === 'function') window.startRecording();
 }
 
+// ==========================================
+// 3. CÁC HÀM ACTION (AI SẼ GỌI CÁC HÀM NÀY)
+// ==========================================
 window.punch = function(hand) {
     if (window.playerFPS.attackCooldown > 0 || window.gameOver || window.playerFPS.isDodging || window.playerFPS.isBlocking) return;
     window.playerFPS.attackCooldown = 15;
     window.playerFPS.stamina -= 10;
     
+    // Kích hoạt CSS vung găng tay
     let glove = document.getElementById(hand + "-glove");
     if(glove) {
         glove.classList.add(`glove-punch-${hand}`);
@@ -155,7 +203,7 @@ window.punch = function(hand) {
         let dmg = 45 * (isCrit ? 2 : 1);
         
         e.hp -= dmg; e.state = 'hurt'; e.hitStun = 20; e.attackTimer = 0;
-        window.enemyZ += 20; 
+        window.enemyZ += 20; // Bị đấm lùi lại
         
         if(typeof window.shakeScreen === 'function') window.shakeScreen(isCrit ? 15 : 8, isCrit ? 10 : 5);
         if(typeof window.spawnParticles === 'function') window.spawnParticles(e.x, e.y - 60, "#ff003c", isCrit);
@@ -183,10 +231,12 @@ window.blockFPS = function() {
         document.removeEventListener('mouseup', releaseBlock);
         document.removeEventListener('touchend', releaseBlock);
     };
+    // Gắn sự kiện nhả tay để hạ khiên
     document.addEventListener('mouseup', releaseBlock);
     document.addEventListener('touchend', releaseBlock);
 };
 
+// AI vẫn dùng hàm này để thỉnh thoảng né tránh tự động
 window.dodgeFPS = function() {
     if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver) return;
     window.playerFPS.isDodging = true; window.playerFPS.stamina -= 20;
@@ -199,6 +249,9 @@ window.dodgeFPS = function() {
     setTimeout(() => { window.playerFPS.isDodging = false; if(canvasWrap) canvasWrap.classList.remove(`camera-dodge-${dir}`); }, 350);
 };
 
+// ==========================================
+// 4. HIỂN THỊ ANIMATION NHÂN VẬT NGOÀI SẢNH
+// ==========================================
 window.previewAnimId = null;
 window.startPreviewLoop = function(charStats) {
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
@@ -218,9 +271,11 @@ window.startPreviewLoop = function(charStats) {
             let fakeChar = { x: 0, y: 0, state: 'idle', isFacingRight: false, color: charStats.color };
             if(Math.floor(pTime/60)%2 === 0) fakeChar.state = 'punch'; 
             
+            // Vẽ thân nhân vật
             if(charStats.drawMethod) charStats.drawMethod(pCtx, fakeChar, 0, 0, 0, false);
             else if(typeof window.drawStickman === 'function') window.drawStickman(pCtx, fakeChar);
             
+            // Dán mặt bạn lên nhân vật
             if (window.enemyFaceImg && window.enemyFaceImg.complete) {
                 pCtx.save(); pCtx.beginPath(); pCtx.arc(0, -135, 30, 0, Math.PI*2); pCtx.clip();
                 pCtx.drawImage(window.enemyFaceImg, -30, -165, 60, 60); pCtx.restore();
