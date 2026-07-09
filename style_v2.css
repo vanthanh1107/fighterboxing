@@ -203,7 +203,6 @@ body {
     align-content: start; 
 }
 
-/* Tùy chỉnh thanh Scrollbar */
 .roster-grid::-webkit-scrollbar { width: 4px; }
 .roster-grid::-webkit-scrollbar-track { background: var(--bg-dark); }
 .roster-grid::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 4px; }
@@ -320,10 +319,7 @@ body {
     cursor: pointer; 
 }
 
-.mode-select-wrapper select option { 
-    background: var(--panel-bg); 
-    color: #fff; 
-}
+.mode-select-wrapper select option { background: var(--panel-bg); color: #fff; }
 
 .btn-ultimate-start { 
     flex: 1.2; 
@@ -339,14 +335,9 @@ body {
     clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px); 
 }
 
-.btn-ultimate-start:hover { 
-    background: #ff1a53; 
-    box-shadow: 0 0 25px rgba(255, 0, 60, 0.5); 
-}
+.btn-ultimate-start:hover { background: #ff1a53; box-shadow: 0 0 25px rgba(255, 0, 60, 0.5); }
+.btn-ultimate-start:active { transform: scale(0.96); }
 
-.btn-ultimate-start:active { 
-    transform: scale(0.96); 
-}
 
 /* =========================================
    5. MÀN HÌNH CHƠI GAME & HUD (FPS MODE)
@@ -453,14 +444,11 @@ body {
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); 
 }
 
-/* Hiệu ứng khi ấn nút (Chìm xuống) */
 .game-btn:active, .skill-btn:active { transform: scale(0.92); }
-
 .game-btn:hover, .skill-btn:hover { border-color: #fff; background: var(--card-bg); }
+
 .block-btn { color: var(--neon-cyan); } 
 .block-btn:hover { background: rgba(0, 243, 255, 0.1); border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); }
-.dodge-btn { color: var(--neon-yellow); } 
-.dodge-btn:hover { background: rgba(241, 196, 15, 0.1); border-color: var(--neon-yellow); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2); }
 
 /* =========================================
    6. HIỆU ỨNG GÓC NHÌN THỨ NHẤT (FPS BRAWLER)
@@ -470,8 +458,7 @@ body {
     bottom: -40px; 
     width: 280px; 
     height: 280px;
-    /* ĐÃ SỬA: Ảnh găng tay đấm bốc đỏ rực chuẩn xác 100% */
-    background-image: url('https://cdn-icons-png.flaticon.com/512/2950/2950586.png'); 
+    background-image: url('https://cdn-icons-png.flaticon.com/512/2950/2950586.png'); /* Găng đỏ mặc định */
     background-size: contain; 
     background-repeat: no-repeat; 
     background-position: center;
@@ -481,11 +468,31 @@ body {
     pointer-events: none;
 }
 
+/* 🌟 CẲNG TAY VÀ BĂNG QUẤN 3D 🌟 */
+.fps-glove::after {
+    content: '';
+    position: absolute;
+    bottom: -250px; 
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px; 
+    height: 300px; 
+    background: linear-gradient(to right, #8b5a2b, #d29961, #f1c27d, #b87333);
+    z-index: -1; 
+    border-radius: 10px;
+    box-shadow: inset 0 35px 0 #bdc3c7, 
+                inset 0 45px 10px rgba(0,0,0,0.5), 
+                0 15px 15px rgba(0,0,0,0.5);
+}
+
 /* Tư thế thủ tiêu chuẩn 3D */
 .left-glove { left: 2%; transform: perspective(600px) rotateX(40deg) rotateY(15deg) rotateZ(10deg); }
 .right-glove { right: 2%; transform: perspective(600px) rotateX(40deg) rotateY(-15deg) rotateZ(-10deg) scaleX(-1); }
 
-/* Khi ra đòn đấm (Có góc vát lên mô phỏng đấm móc/thẳng) */
+/* Lật màu đổ bóng cẳng tay phải */
+.right-glove::after { background: linear-gradient(to left, #8b5a2b, #d29961, #f1c27d, #b87333); }
+
+/* Khi ra đòn đấm */
 .glove-punch-left { 
     transform: perspective(600px) translate(100px, -220px) rotateX(15deg) rotateY(5deg) scale(0.7) !important; 
     filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)) !important; 
@@ -495,7 +502,7 @@ body {
     filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)) !important; 
 }
 
-/* Khi đỡ đòn (Bắt chéo tay phát sáng Neon) */
+/* Khi đỡ đòn */
 .glove-block-left { 
     transform: perspective(600px) translate(80px, -120px) rotateX(10deg) rotateZ(40deg) scale(1.1) !important; 
     filter: drop-shadow(0 0 30px rgba(0,243,255,0.7)) !important; 
@@ -505,20 +512,15 @@ body {
     filter: drop-shadow(0 0 30px rgba(0,243,255,0.7)) !important; 
 }
 
-/* Lách người né đòn (Camera nghiêng và dịch chuyển) */
+/* Lách người né đòn (Camera di chuyển) */
 .camera-dodge-left { transform: translateX(80px) rotate(3deg) scale(1.02); }
 .camera-dodge-right { transform: translateX(-80px) rotate(-3deg) scale(1.02); }
 
-/* Màn hình bị nứt (Khi bị đấm trúng mặt) */
+/* Màn hình bị nứt */
 .screen-crack { 
-    position: absolute; 
-    top: 0; left: 0; 
-    width: 100%; height: 100%; 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
     background: url('https://cdn-icons-png.flaticon.com/512/3295/3295055.png') center/cover no-repeat; 
-    opacity: 0; 
-    pointer-events: none; 
-    z-index: 99; 
-    transition: opacity 0.1s ease-out; 
+    opacity: 0; pointer-events: none; z-index: 99; transition: opacity 0.1s ease-out; 
 }
 
 /* =========================================
@@ -531,12 +533,13 @@ body {
     .row-bottom-controls { flex-direction: column; height: auto; gap: 12px; } 
     .btn-ultimate-start { height: 55px; } 
     
-    /* Găng tay trên điện thoại không được quá to che mất màn hình */
-    .fps-glove {
-        width: 180px;
-        height: 180px;
-        bottom: -20px;
+    /* Thu nhỏ găng tay và cẳng tay trên điện thoại */
+    .fps-glove { width: 180px; height: 180px; bottom: -20px; }
+    .fps-glove::after { 
+        width: 70px; height: 200px; bottom: -180px; 
+        box-shadow: inset 0 20px 0 #bdc3c7, inset 0 25px 5px rgba(0,0,0,0.5); 
     }
+    
     .glove-punch-left { transform: perspective(600px) translate(60px, -150px) rotateX(10deg) scale(0.8) !important; }
     .glove-punch-right { transform: perspective(600px) translate(-60px, -150px) rotateX(10deg) scaleX(-1) scale(0.8) !important; }
 }
