@@ -1,6 +1,6 @@
 // ==========================================
-// ENGINE.JS - FIRST PERSON FOOTWORK EDITION (V10.0)
-// [NÂNG CẤP: BỘ PHÁP TIẾN/LÙI, ĐỐI THỦ DI CHUYỂN MƯỢT MÀ LERPS]
+// ENGINE.JS - AUTO-BATTLER CINEMATIC EDITION (V11.0)
+// [NÂNG CẤP: AI TỰ ĐỘNG ĐÁNH THAY NGƯỜI CHƠI, CHỈ GIỮ LẠI NÚT ĐỠ]
 // ==========================================
 
 window.canvas = null; window.ctx = null; window.audioCtx = null; window.isMuted = false;
@@ -9,6 +9,9 @@ window.matchTimer = 0; window.shakeTime = 0; window.shakeMag = 0; window.koGlitc
 window.GROUND_Y = 320; window.GRAVITY = 0.8; window.lastFrameTime = 0; window.FRAME_MIN_TIME = 1000 / 60;
 window.globalWind = 0;
 
+// ==========================================
+// 1. HỆ THỐNG ÂM THANH & HẠT VFX
+// ==========================================
 window.playSound = function(freq, type, duration, vol, isImpact = false) { 
     if (window.isMuted) return; 
     try {
@@ -25,22 +28,15 @@ window.playSound = function(freq, type, duration, vol, isImpact = false) {
 window.shakeScreen = function(frames, magnitude) { window.shakeTime = frames; window.shakeMag = magnitude; }
 window.spawnParticles = function(x, y, color, isCrit = false) { let count = isCrit ? 15 : 8; for(let i=0; i<count; i++) { let angle = Math.random() * Math.PI * 2; let speed = Math.random() * (isCrit?12:6) + 2; window.particles.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 20, maxLife: 20, color: color, size: Math.random() * 4 + 2 }); } }
 
-// --- HỆ THỐNG ĐIỀU KHIỂN BỘ PHÁP CỦA BẠN (FOOTWORK) ---
-
-// Nút Tiến/Lùi
+// ==========================================
+// 2. CÁC HÀM HÀNH ĐỘNG CƠ BẢN (AI SẼ GỌI CÁC HÀM NÀY)
+// ==========================================
 window.moveFPS = function(dir) {
-    // dir = -1 (Tiến lên, rút ngắn khoảng cách Z), dir = 1 (Lùi lại, dãn khoảng cách Z)
     if (window.playerFPS.stamina < 5 || window.gameOver || window.playerFPS.isDodging) return;
     window.playerFPS.stamina -= 5;
-    
-    // Bước chân di chuyển 35 đơn vị mỗi lần ấn
     window.enemyZ += dir * 35; 
-    // Khóa giới hạn: Không lùi quá 250, không tiến sát quá 20
     window.enemyZ = Math.max(20, Math.min(250, window.enemyZ)); 
-    
     window.playSound(200, 'sine', 0.1, 0.2);
-    
-    // Rung nhẹ camera để tạo cảm giác bước chân
     document.querySelector(".canvas-wrapper").style.transform = `translateY(${dir * 5}px)`;
     setTimeout(() => { document.querySelector(".canvas-wrapper").style.transform = "none"; }, 100);
 };
@@ -54,7 +50,6 @@ window.punch = function(hand) {
     window.playSound(350, 'sine', 0.1, 0.3);
 
     let e = window.enemies[0];
-    // TẦM ĐÁNH PHỤ THUỘC VÀO TRỤC Z (Nếu bạn lùi quá xa > 55, đấm sẽ hụt!)
     if (e && e.hp > 0 && window.enemyZ <= 55) {
         let isCrit = Math.random() < 0.2; let dmg = 45 * (isCrit ? 2 : 1);
         e.hp -= dmg; e.state = 'hurt'; e.hitStun = 20; e.attackTimer = 0; 
@@ -65,9 +60,8 @@ window.punch = function(hand) {
         window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, "#ff003c", isCrit);
         window.floatingTexts.push({ x: window.canvas.width/2 + (Math.random()*40-20), y: window.canvas.height/2 - 120, text: isCrit ? `💥 -${dmg}` : `-${dmg}`, color: isCrit ? "#ff4757" : "#fff", alpha: 1, vx: 0, vy: -3, font: "900 35px Arial", life: 40 });
         
-        if (e.hp <= 0) { e.hp = 0; e.state = 'ko_falling'; e.koTimer = 100; e.vy = -10; window.matchResolved = true; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "K.O! BẠN ĐÃ THẮNG!", color: "#f1c40f", alpha: 1, vx: 0, vy: -1, font: "900 60px Arial", life: 180 }); }
+        if (e.hp <= 0) { e.hp = 0; e.state = 'ko_falling'; e.koTimer = 100; e.vy = -10; window.matchResolved = true; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "K.O! VÕ SĨ CỦA BẠN ĐÃ THẮNG!", color: "#f1c40f", alpha: 1, vx: 0, vy: -1, font: "900 40px Arial", life: 180 }); }
     } else {
-        // Bạn vung tay quá ngắn (hoặc địch ở xa)
         window.floatingTexts.push({ x: window.canvas.width/2 + (hand==='left'? -80:80), y: window.canvas.height/2, text: "MISS!", color: "#7f8c8d", alpha: 1, vx: 0, vy: -1, font: "bold 25px Arial", life: 25 });
     }
 };
@@ -83,7 +77,7 @@ window.blockFPS = function() {
 window.dodgeFPS = function() {
     if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver) return;
     window.playerFPS.isDodging = true; 
-    window.playerFPS.iFrames = 20; // 20 Frames bất tử khi né
+    window.playerFPS.iFrames = 20; 
     window.playerFPS.stamina -= 20;
     let dir = Math.random() > 0.5 ? "left" : "right"; let canvasWrap = document.querySelector(".canvas-wrapper");
     if(canvasWrap) canvasWrap.classList.add(`camera-dodge-${dir}`);
@@ -91,7 +85,9 @@ window.dodgeFPS = function() {
     setTimeout(() => { window.playerFPS.isDodging = false; if(canvasWrap) canvasWrap.classList.remove(`camera-dodge-${dir}`); }, 350);
 };
 
-// --- VÒNG LẶP UPDATE LOGIC ---
+// ==========================================
+// 3. VÒNG LẶP UPDATE (GIAO TRANH AI vs AI)
+// ==========================================
 window.update = function() {
     if (!window.canvas) { window.canvas = document.getElementById("battleCanvas"); if(window.canvas) window.ctx = window.canvas.getContext("2d"); } 
     if (!window.canvas || !window.ctx) return; 
@@ -102,62 +98,85 @@ window.update = function() {
     window.globalWind = Math.sin(Date.now() / 2500) * 1.5; window.matchTimer++; if (window.shakeTime > 0) window.shakeTime--; 
     
     if (window.playerFPS.attackCooldown > 0) window.playerFPS.attackCooldown--;
-    if (window.playerFPS.iFrames > 0) window.playerFPS.iFrames--; // Hết khung hình bất tử
+    if (window.playerFPS.iFrames > 0) window.playerFPS.iFrames--;
     if (window.playerFPS.stamina < 100 && !window.playerFPS.isBlocking) window.playerFPS.stamina += 0.4;
 
     let e = window.enemies[0];
+    
+    // --- [1] AI AUTO-BATTLER CHO NGƯỜI CHƠI (BẠN LÀ AI) ---
+    if (e && e.hp > 0 && !window.gameOver && window.introTimer <= 0) {
+        // AI Của Bạn chỉ tự động đánh khi bạn KHÔNG giữ nút Đỡ đòn
+        if (!window.playerFPS.isBlocking && e.hitStun <= 0) {
+            // Mỗi 35 frames (khoảng 0.5s) AI sẽ ra quyết định 1 lần
+            if (window.matchTimer % 35 === 0) {
+                // Kẻ địch chuẩn bị tung đòn -> Có 30% tỷ lệ AI của bạn tự né
+                if (e.attackTimer > 15 && Math.random() < 0.3) {
+                    window.enemyZ += 40; 
+                    document.querySelector(".canvas-wrapper").style.transform = `translateY(5px)`;
+                    setTimeout(() => { document.querySelector(".canvas-wrapper").style.transform = "none"; }, 100);
+                    window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2 + 50, text: "💨 TỰ NÉ!", color: "#f1c40f", alpha: 1, vx: 0, vy: -2, font: "900 25px Arial", life: 30 });
+                } 
+                // Khoảng cách quá xa -> AI của bạn tự lao vào
+                else if (window.enemyZ > 55) {
+                    window.enemyZ -= 25; // Bước tới
+                    document.querySelector(".canvas-wrapper").style.transform = `translateY(-5px)`;
+                    setTimeout(() => { document.querySelector(".canvas-wrapper").style.transform = "none"; }, 100);
+                } 
+                // Áp sát -> AI của bạn tự tung cú đấm
+                else if (window.enemyZ <= 55 && window.playerFPS.stamina > 10) {
+                    let hand = Math.random() > 0.5 ? 'left' : 'right';
+                    window.punch(hand);
+                }
+            }
+        }
+    }
+
+    // --- [2] AI CỦA KẺ ĐỊCH ---
     if (e && e.hp > 0 && !window.gameOver) {
-        
-        // KIẾN TRÚC AI MƯỢT MÀ BẰNG LERP (NỘI SUY TỌA ĐỘ)
         if (!e.targetX) e.targetX = 400;
         if (!e.targetZ) e.targetZ = 120;
 
         if (e.hitStun > 0) { 
             e.hitStun--; if(e.hitStun <= 0) e.state = 'idle'; 
-            // Giật lùi mượt khi trúng đòn
-            window.enemyZ += (window.enemyZ - e.targetZ) * 0.1;
+            window.enemyZ += (window.enemyZ - e.targetZ) * 0.1; // Giật lùi mượt khi trúng đòn
         } 
         else {
             if (e.attackTimer > 0) {
                 e.attackTimer--;
-                if (e.attackTimer === 10) { 
-                    // Kiểm tra người chơi có đang dùng iframe (Né) hoặc lùi ra xa > 55 không
+                if (e.attackTimer === 10) { // Khung hình chạm mục tiêu (Hit Frame)
                     if (window.playerFPS.iFrames > 0 || window.playerFPS.isDodging || window.enemyZ > 55) { 
                         window.floatingTexts.push({ x: 400, y: 200, text: "MISS!", color: "#bdc3c7", alpha: 1, vx: 0, vy: -2, font: "900 35px Arial", life: 40 }); 
-                        e.targetZ = 80; // Bị trượt đà
+                        e.targetZ = 80; 
                     } 
                     else if (window.playerFPS.isBlocking) { 
                         window.playSound(600, 'triangle', 0.2, 0.5, true); window.shakeScreen(5, 3); window.playerFPS.stamina -= 15; 
-                        e.targetZ = 100; // Bị dội ngược ra
+                        e.targetZ = 100; // Địch bị dội ngược ra
                         window.floatingTexts.push({ x: 400, y: 250, text: "🛡️ BLOCKED", color: "#00f3ff", alpha: 1, vx: 0, vy: -2, font: "900 30px Arial", life: 30 }); 
                     } 
                     else {
-                        // Kẻ địch đấm trúng bạn
                         let dmg = Math.floor(15 * e.dmgMod); window.playerFPS.hp -= dmg; window.shakeScreen(20, 15); window.playSound(150, 'square', 0.3, 0.8, true);
                         let crack = document.getElementById("screen-crack"); if(crack) { crack.style.opacity = 1; setTimeout(() => crack.style.opacity = 0, 300); }
-                        if (window.playerFPS.hp <= 0) { window.playerFPS.hp = 0; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "BẠN ĐÃ BỊ HẠ GỤC!", color: "#ff4757", alpha: 1, vx: 0, vy: -1, font: "900 50px Arial", life: 180 }); }
+                        if (window.playerFPS.hp <= 0) { window.playerFPS.hp = 0; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "VÕ SĨ CỦA BẠN ĐÃ GỤC!", color: "#ff4757", alpha: 1, vx: 0, vy: -1, font: "900 40px Arial", life: 180 }); }
                     }
                 }
             } else {
-                // Đảo bước (Footwork của địch)
+                // Footwork của đối thủ
                 if (window.matchTimer % 60 === 0) {
-                    // Lâu lâu địch tự động lướt trái/phải hoặc lùi lại nhử đòn
                     e.targetX = 400 + (Math.random() - 0.5) * 200;
-                    if (window.enemyZ < 40 && Math.random() < 0.5) e.targetZ = 120; // Địch lùi lại
-                    else e.targetZ = 20; // Địch áp sát
+                    if (window.enemyZ < 40 && Math.random() < 0.5) e.targetZ = 120; // Lùi lại
+                    else e.targetZ = 20; // Áp sát
                 }
 
-                // Smooth di chuyển (Lerp)
                 e.x += (e.targetX - e.x) * 0.08;
                 window.enemyZ += (e.targetZ - window.enemyZ) * 0.05;
 
-                // Nếu đang ở gần (<30), tung đòn
+                // Nếu sát rạt, tung đòn
                 if (window.enemyZ < 30) {
                     e.state = ['punch', 'cross', 'hook', 'uppercut'][Math.floor(Math.random()*4)]; 
                     e.attackTimer = 25; 
-                    e.targetZ = 35; // Lùi đà
+                    e.targetZ = 35; // Lùi đà sau khi đấm
                 } else if (Math.abs(e.targetX - e.x) > 10) {
-                    e.state = 'dash'; // Nghiêng người di chuyển
+                    e.state = 'dash';
                 } else {
                     e.state = 'walk';
                 }
@@ -175,7 +194,9 @@ window.update = function() {
     if(window.weatherParticles) { window.weatherParticles.forEach(w => { w.y += w.speed; w.x += Math.sin(w.y/50)*2 + window.globalWind; if(w.y > window.canvas.height + 20) { w.y = -20; w.x = Math.random() * window.canvas.width; } }); }
 }
 
-// --- VÒNG LẶP VẼ (DRAW) ---
+// ==========================================
+// 4. VÒNG LẶP VẼ (DRAW)
+// ==========================================
 window.draw = function() {
     if (!window.canvas || !window.ctx) return;
     window.ctx.setTransform(1, 0, 0, 1, 0, 0); window.ctx.clearRect(0, 0, window.canvas.width, window.canvas.height); window.ctx.save();
