@@ -470,7 +470,8 @@ body {
     bottom: -40px; 
     width: 280px; 
     height: 280px;
-    background-image: url('https://cdn-icons-png.flaticon.com/512/7510/7510619.png'); 
+    /* ĐÃ SỬA: Ảnh găng tay đấm bốc đỏ rực chuẩn xác 100% */
+    background-image: url('https://cdn-icons-png.flaticon.com/512/2950/2950586.png'); 
     background-size: contain; 
     background-repeat: no-repeat; 
     background-position: center;
