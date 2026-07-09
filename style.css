@@ -1,0 +1,32 @@
+/* =========================================
+   FIRST-PERSON HUD & GLOVES
+   ========================================= */
+.fps-glove {
+    position: absolute;
+    bottom: -20px;
+    font-size: 120px;
+    transition: transform 0.1s cubic-bezier(0.1, 0.9, 0.2, 1);
+    filter: drop-shadow(0 15px 15px rgba(0,0,0,0.8));
+    z-index: 100;
+}
+.left-glove { left: 10%; transform: rotate(15deg); }
+.right-glove { right: 10%; transform: rotate(-15deg) scaleX(-1); }
+
+/* Animation Đấm Trái/Phải (Vươn thẳng vào giữa màn hình) */
+.glove-punch-left { transform: translate(150px, -200px) scale(0.6) rotate(0deg) !important; }
+.glove-punch-right { transform: translate(-150px, -200px) scale(0.6) scaleX(-1) !important; }
+
+/* Animation Đỡ Đòn (Găng tay che kín mặt) */
+.glove-block-left { transform: translate(100px, -150px) rotate(45deg) !important; }
+.glove-block-right { transform: translate(-100px, -150px) scaleX(-1) rotate(45deg) !important; }
+
+/* Animation Lách Người (Né) */
+.camera-dodge-left { transform: translateX(100px) rotate(5deg); }
+.camera-dodge-right { transform: translateX(-100px) rotate(-5deg); }
+
+/* Màn hình bị nứt khi đối phương đấm trúng */
+.screen-crack {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: url('https://cdn-icons-png.flaticon.com/512/3295/3295055.png') center/cover;
+    opacity: 0; pointer-events: none; z-index: 99; transition: opacity 0.2s;
+}
