@@ -235,4 +235,41 @@ window.drawStickman = function(ctx, p, isTrail = false) {
     } else {
         // Fallback nếu ảnh lỗi: Vẽ đầu tròn neon
         ctx.fillStyle = "#111";
-        ctx.beginPath(); ctx.arc(head.x, head.y
+        ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+
+    // --- VẼ GĂNG TAY ĐẤM BỐC (BOXING GLOVES) ---
+    const drawBoxingGlove = (handPt, color) => {
+        ctx.save();
+        ctx.translate(handPt.x, handPt.y);
+        ctx.scale(handPt.z, handPt.z); // Tính năng cốt lõi: Phóng to găng tay khi đấm!
+        
+        ctx.shadowBlur = 15; ctx.shadowColor = color;
+        ctx.fillStyle = color;
+        
+        // Vẽ khối găng tay
+        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#111"; // Viền xám đen bên trong
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+        
+        ctx.restore();
+    };
+
+    // Vẽ găng tay 2 bên
+    if (!isTrail) {
+        drawBoxingGlove(handL, p.color || "#ff4757");
+        drawBoxingGlove(handR, p.color || "#ff4757");
+    }
+
+    // --- VẼ GIÁP BẢO VỆ (SHIELD) ---
+    if (p.superArmor > 0 && !isTrail) { 
+        ctx.beginPath(); ctx.arc(0, -70, 90, 0, Math.PI * 2); 
+        ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255, 71, 87, 0.8)"; ctx.stroke(); 
+        ctx.fillStyle = "rgba(255, 71, 87, 0.15)"; ctx.fill(); 
+    }
+
+    ctx.restore();
+};
+
+// Hỗ trợ chống lỗi nếu các file nhân vật cũ gọi hàm này
+window.assignDrawMethods = function(statsObj) { };
