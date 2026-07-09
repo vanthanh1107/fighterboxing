@@ -1,6 +1,6 @@
 // ==========================================
-// ENGINE.JS - AUTO-BATTLER CINEMATIC EDITION (V12.0)
-// [NÂNG CẤP: AI BOXING THỰC TẾ, ĐỔI ĐÒN, PHÒNG THỦ VÀ NHỊP ĐỘ]
+// ENGINE.JS - AUTO-BATTLER CINEMATIC EDITION (V13.0)
+// [CẬP NHẬT: CÂN BẰNG AI - ĐỊCH HUNG HÃN HƠN, BẠN PHẢI TỰ ĐỠ ĐÒN NHIỀU HƠN]
 // ==========================================
 
 window.canvas = null; window.ctx = null; window.audioCtx = null; window.isMuted = false;
@@ -31,7 +31,7 @@ window.spawnParticles = function(x, y, color, isCrit = false) { let count = isCr
 window.moveFPS = function(dir) {
     if (window.playerFPS.stamina < 5 || window.gameOver || window.playerFPS.isDodging) return;
     window.playerFPS.stamina -= 5;
-    window.enemyZ += dir * 25; // Giảm bước di chuyển để không bị văng quá xa
+    window.enemyZ += dir * 25; 
     window.enemyZ = Math.max(30, Math.min(200, window.enemyZ)); 
     window.playSound(200, 'sine', 0.1, 0.2);
     document.querySelector(".canvas-wrapper").style.transform = `translateY(${dir * 5}px)`;
@@ -41,7 +41,7 @@ window.moveFPS = function(dir) {
 window.punch = function(hand) {
     if (window.playerFPS.attackCooldown > 0 || window.gameOver || window.playerFPS.isDodging || window.playerFPS.isBlocking) return;
     window.playerFPS.attackCooldown = 15; 
-    window.playerFPS.stamina -= 12; // Mất nhiều thể lực hơn để AI không spam liên tục
+    window.playerFPS.stamina -= 12; 
     
     let glove = document.getElementById(hand + "-glove");
     if(glove) { glove.classList.add(`glove-punch-${hand}`); setTimeout(() => glove.classList.remove(`glove-punch-${hand}`), 150); }
@@ -50,35 +50,25 @@ window.punch = function(hand) {
     let e = window.enemies[0];
     if (e && e.hp > 0 && window.enemyZ <= 65) {
         
-        // --- 🌟 KẺ ĐỊCH CÓ KHẢ NĂNG PHÒNG NGỰ KHI BỊ BẠN ĐẤM ---
         let defenseRoll = Math.random();
-        // 15% Né đòn, 25% Đỡ đòn (Chỉ kích hoạt khi địch đang rảnh rỗi)
         if (e.attackTimer <= 0 && e.hitStun <= 0) {
             if (defenseRoll < 0.15) {
-                // Địch lách né
                 window.floatingTexts.push({ x: 400, y: 150, text: "💨 ĐỊCH NÉ!", color: "#bdc3c7", alpha: 1, vx: 0, vy: -2, font: "bold 30px Arial", life: 30 });
-                e.x += (Math.random() > 0.5 ? 40 : -40); // Địch dạt sang ngang
-                return; // Trượt
+                e.x += (Math.random() > 0.5 ? 40 : -40); 
+                return; 
             } else if (defenseRoll < 0.40) {
-                // Địch giơ tay đỡ
                 window.floatingTexts.push({ x: 400, y: 150, text: "🛡️ ĐỊCH ĐỠ!", color: "#3498db", alpha: 1, vx: 0, vy: -1, font: "bold 30px Arial", life: 30 });
                 window.playSound(600, 'triangle', 0.2, 0.4, true);
-                window.enemyZ += 5; // Chỉ bị đẩy nhẹ
-                e.hp -= 2; // Mất máu sứt sẹo cực ít
-                return; // Chặn sát thương
+                window.enemyZ += 5; 
+                e.hp -= 2; 
+                return; 
             }
         }
 
-        // --- NẾU ĐẤM TRÚNG ---
         let isCrit = Math.random() < 0.25; 
-        let dmg = 45 * (isCrit ? 2 : 1);
+        let dmg = 40 * (isCrit ? 2 : 1);
         
-        e.hp -= dmg; 
-        e.state = 'hurt'; 
-        e.hitStun = isCrit ? 25 : 12; // Đấm thường nhanh tỉnh để đánh trả
-        e.attackTimer = 0; 
-        
-        // Sửa lỗi Stun-lock: Đấm thường không đẩy ra xa, giữ địch ở gần để đổi đòn
+        e.hp -= dmg; e.state = 'hurt'; e.hitStun = isCrit ? 25 : 12; e.attackTimer = 0; 
         window.enemyZ += (isCrit ? 20 : 2); 
         
         window.shakeScreen(isCrit ? 15 : 8, isCrit ? 10 : 5);
@@ -101,9 +91,7 @@ window.blockFPS = function() {
 
 window.dodgeFPS = function() {
     if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver) return;
-    window.playerFPS.isDodging = true; 
-    window.playerFPS.iFrames = 20; 
-    window.playerFPS.stamina -= 20;
+    window.playerFPS.isDodging = true; window.playerFPS.iFrames = 20; window.playerFPS.stamina -= 20;
     let dir = Math.random() > 0.5 ? "left" : "right"; let canvasWrap = document.querySelector(".canvas-wrapper");
     if(canvasWrap) canvasWrap.classList.add(`camera-dodge-${dir}`);
     window.playSound(200, 'sine', 0.2, 0.4);
@@ -128,26 +116,21 @@ window.update = function() {
 
     let e = window.enemies[0];
     
-    // --- 🌟 [1] AI AUTO-BATTLER CỦA BẠN (NHỊP ĐỘ BOXING) ---
+    // --- 🌟 [1] AI AUTO-BATTLER CỦA BẠN (ĐÃ GIẢM TỶ LỆ TỰ ĐỘNG PHÒNG THỦ) ---
     if (e && e.hp > 0 && !window.gameOver && window.introTimer <= 0) {
-        
-        // Khởi tạo bộ đếm nhịp cho AI của bạn
         if (!window.playerFPS.aiStateTimer) window.playerFPS.aiStateTimer = 0;
         if (window.playerFPS.aiStateTimer > 0) window.playerFPS.aiStateTimer--;
 
-        // Nếu bạn KHÔNG giữ nút thủ bằng tay
+        // CHỈ tự đánh khi bạn KHÔNG GIỮ nút Đỡ
         if (!window.playerFPS.isBlocking && e.hitStun <= 0) {
             
-            // Đến nhịp ra quyết định (0.2s - 0.8s một lần)
             if (window.playerFPS.aiStateTimer <= 0) {
-                // Random thời gian suy nghĩ cho bước tiếp theo
                 window.playerFPS.aiStateTimer = Math.floor(15 + Math.random() * 35); 
                 
-                // 1. Nếu địch đang vung tay đấm -> 50% Đỡ, 30% Né, 20% dính đòn
+                // 1. Nếu địch đang vung tay đấm -> CHỈ CÒN 15% tự đỡ, 15% tự né. (Bạn phải tự bấm Đỡ!)
                 if (e.attackTimer > 5) {
                     let defendRoll = Math.random();
-                    if (defendRoll < 0.5 && window.playerFPS.stamina > 20) {
-                        // Tự động kích hoạt khiên đỡ 0.4 giây
+                    if (defendRoll < 0.15 && window.playerFPS.stamina > 20) {
                         window.blockFPS();
                         setTimeout(() => { 
                             window.playerFPS.isBlocking = false; 
@@ -155,84 +138,87 @@ window.update = function() {
                             document.getElementById("right-glove").classList.remove("glove-block-right"); 
                         }, 400);
                         window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2 + 50, text: "🛡️ TỰ ĐỠ ĐÒN!", color: "#00f3ff", alpha: 1, vx: 0, vy: -2, font: "900 25px Arial", life: 30 });
-                    } else if (defendRoll < 0.8) {
+                    } else if (defendRoll < 0.30) {
                         window.dodgeFPS();
                         window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2 + 50, text: "💨 TỰ LÁCH NÉ!", color: "#f1c40f", alpha: 1, vx: 0, vy: -2, font: "900 25px Arial", life: 30 });
                     }
                 } 
-                // 2. Địch sơ hở, thể lực bạn dồi dào -> Tấn công
-                else if (window.playerFPS.stamina > 30) {
+                // 2. Tấn công mạnh bạo hơn
+                else if (window.playerFPS.stamina > 25) {
                     if (window.enemyZ > 65) {
-                        // Kéo lại gần
                         window.moveFPS(-1);
-                        window.playerFPS.aiStateTimer = 15; // Tiến nhanh
+                        window.playerFPS.aiStateTimer = 10; 
                     } else {
-                        // Đấm cận chiến
                         let hand = Math.random() > 0.5 ? 'left' : 'right';
                         window.punch(hand);
-                        // Tung combo nhanh hơn (delay thấp)
-                        window.playerFPS.aiStateTimer = 10; 
+                        window.playerFPS.aiStateTimer = 8; // Đánh liên tục
                     }
                 }
-                // 3. Thể lực yếu -> Lùi lại nghỉ ngơi
+                // 3. Hết stamina thì lùi về thở
                 else {
-                    window.moveFPS(1); // Lùi xa ra
-                    window.playerFPS.aiStateTimer = 40; // Đứng nghỉ lâu hơn
+                    window.moveFPS(1); 
+                    window.playerFPS.aiStateTimer = 30; 
                 }
             }
         }
     }
 
-    // --- 🌟 [2] AI CỦA KẺ ĐỊCH (BÁM ĐUỔI VÀ ĐỔI ĐÒN) ---
+    // --- 🌟 [2] AI CỦA KẺ ĐỊCH (ĐÃ TĂNG ĐỘ HUNG HÃN VÀ SẢI TAY) ---
     if (e && e.hp > 0 && !window.gameOver) {
         if (!e.targetX) e.targetX = 400;
         if (!e.targetZ) e.targetZ = 120;
 
         if (e.hitStun > 0) { 
             e.hitStun--; if(e.hitStun <= 0) e.state = 'idle'; 
-            window.enemyZ += (window.enemyZ - e.targetZ) * 0.05; // Mềm mại lùi lại khi đau
+            window.enemyZ += (window.enemyZ - e.targetZ) * 0.05; 
         } 
         else {
             if (e.attackTimer > 0) {
                 e.attackTimer--;
                 if (e.attackTimer === 8) { // Frame Hit
-                    if (window.playerFPS.iFrames > 0 || window.playerFPS.isDodging || window.enemyZ > 65) { 
+                    // SẢI TAY ĐỊCH DÀI HƠN: Phải ở xa hơn 75 mới hụt đòn
+                    if (window.playerFPS.iFrames > 0 || window.playerFPS.isDodging || window.enemyZ > 75) { 
                         window.floatingTexts.push({ x: 400, y: 200, text: "MISS!", color: "#bdc3c7", alpha: 1, vx: 0, vy: -2, font: "900 35px Arial", life: 40 }); 
-                        e.targetZ = 60; // Hụt đà
+                        e.targetZ = 60; 
                     } 
                     else if (window.playerFPS.isBlocking) { 
                         window.playSound(600, 'triangle', 0.2, 0.5, true); window.shakeScreen(5, 3); window.playerFPS.stamina -= 15; 
-                        e.targetZ = 80; // Bị dội ngược ra
+                        e.targetZ = 80; 
                         window.floatingTexts.push({ x: 400, y: 250, text: "🛡️ BLOCKED", color: "#00f3ff", alpha: 1, vx: 0, vy: -2, font: "900 30px Arial", life: 30 }); 
                     } 
                     else {
-                        let dmg = Math.floor(18 * e.dmgMod); window.playerFPS.hp -= dmg; window.shakeScreen(20, 15); window.playSound(150, 'square', 0.3, 0.8, true);
+                        // KẺ ĐỊCH ĐÁNH TRÚNG BẠN (Gây sát thương đau hơn)
+                        let dmg = Math.floor((18 + Math.random() * 8) * e.dmgMod); 
+                        window.playerFPS.hp -= dmg; 
+                        window.shakeScreen(25, 18); // Màn hình giật mạnh hơn
+                        window.playSound(150, 'square', 0.3, 0.8, true);
+                        
+                        // Hiệu ứng máu văng lên kính
                         let crack = document.getElementById("screen-crack"); if(crack) { crack.style.opacity = 1; setTimeout(() => crack.style.opacity = 0, 300); }
+                        
                         if (window.playerFPS.hp <= 0) { window.playerFPS.hp = 0; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "VÕ SĨ CỦA BẠN ĐÃ GỤC!", color: "#ff4757", alpha: 1, vx: 0, vy: -1, font: "900 40px Arial", life: 180 }); }
                     }
                 }
             } else {
-                // Footwork hung hãn của đối thủ
-                if (window.matchTimer % 45 === 0) {
-                    e.targetX = 400 + (Math.random() - 0.5) * 150; // Lách nhẹ
-                    
-                    // Nếu bạn lùi ra xa, địch lao tới quyết liệt. Đang ở gần thì giữ vị trí đấm.
-                    if (window.enemyZ > 60) e.targetZ = 35; // Lao vào túi đánh
-                    else if (Math.random() < 0.2) e.targetZ = 100; // Lâu lâu lùi ra thở
-                    else e.targetZ = 45; // Đứng lỳ trong túi
+                // Kẻ địch áp sát nhanh và đấm nhiều hơn
+                if (window.matchTimer % 40 === 0) {
+                    e.targetX = 400 + (Math.random() - 0.5) * 120;
+                    if (window.enemyZ > 55) e.targetZ = 30; // Lao vào mạnh mẽ
+                    else if (Math.random() < 0.15) e.targetZ = 90; // Ít lùi lại hơn
+                    else e.targetZ = 45; 
                 }
 
                 e.x += (e.targetX - e.x) * 0.08;
-                window.enemyZ += (e.targetZ - window.enemyZ) * 0.08; // Địch bám đuổi nhanh hơn
+                window.enemyZ += (e.targetZ - window.enemyZ) * 0.08; 
 
-                // Trong tầm đánh -> Tung đấm
-                if (window.enemyZ <= 55 && Math.random() < 0.05) { // Tỷ lệ đấm ngẫu nhiên để không bị máy móc
+                // Tăng tỷ lệ đấm từ 5% lên 9%
+                if (window.enemyZ <= 60 && Math.random() < 0.09) { 
                     e.state = ['punch', 'cross', 'hook', 'uppercut'][Math.floor(Math.random()*4)]; 
-                    e.attackTimer = 22; 
+                    e.attackTimer = 20; // Đánh nhanh hơn một chút
                 } else if (Math.abs(e.targetX - e.x) > 10) {
                     e.state = 'dash';
                 } else {
-                    e.state = 'idle'; // Nảy nhẹ người
+                    e.state = 'idle'; 
                 }
             }
         }
