@@ -1,6 +1,6 @@
 // ==========================================
-// ENGINE.JS - CINEMATIC AUTO-BATTLER (V20.0 - ULTIMATE BOXING)
-// [ĐỈNH CAO: BẠN CŨNG CÓ THỂ LÁCH NÉ NGHIÊNG MÀN HÌNH VÀ PHẢN ĐÒN]
+// ENGINE.JS - CINEMATIC AUTO-BATTLER (V22.0 - TRUE BATTLE)
+// [CẬP NHẬT: KẺ ĐỊCH CÓ SUPER ARMOR, ĐÁNH TRẢ QUYẾT LIỆT, ĐỔI ĐÒN MÁU LỬA]
 // ==========================================
 
 window.canvas = null; window.ctx = null; window.audioCtx = null; window.isMuted = false;
@@ -9,9 +9,11 @@ window.matchTimer = 0; window.shakeTime = 0; window.shakeMag = 0; window.koGlitc
 window.GROUND_Y = 320; window.GRAVITY = 0.8; window.lastFrameTime = 0; window.FRAME_MIN_TIME = 1000 / 60;
 window.globalWind = 0;
 
-// HỆ THỐNG CAMERA ĐIỆN ẢNH
 window.camX = 0; window.camY = 0; window.cameraTilt = 0; window.camZoom = 1;
-window.targetZ = 120; // Khoảng cách lý tưởng giữa 2 võ sĩ
+window.targetZ = 120; 
+
+// Biến hiệu ứng chớp đỏ khi bị đánh trúng
+window.damageFlashAlpha = 0; 
 
 window.playSound = function(freq, type, duration, vol, isImpact = false) { 
     if (window.isMuted) return; 
@@ -30,7 +32,7 @@ window.shakeScreen = function(frames, magnitude) { window.shakeTime = frames; wi
 window.spawnParticles = function(x, y, color, isCrit = false) { let count = isCrit ? 15 : 8; for(let i=0; i<count; i++) { let angle = Math.random() * Math.PI * 2; let speed = Math.random() * (isCrit?12:6) + 2; window.particles.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 20, maxLife: 20, color: color, size: Math.random() * 4 + 2 }); } }
 
 // ==========================================
-// 2. CÁC HÀM HÀNH ĐỘNG CỦA BẠN (TÍCH HỢP NÉ & CAMERA)
+// 2. CÁC HÀM HÀNH ĐỘNG CỦA BẠN 
 // ==========================================
 window.moveFPS = function(dir) {
     if (window.playerFPS.stamina < 5 || window.gameOver || window.playerFPS.isDodging) return;
@@ -44,36 +46,38 @@ window.moveFPS = function(dir) {
 window.punch = function(hand) {
     if (window.playerFPS.attackCooldown > 0 || window.gameOver || window.playerFPS.isBlocking) return;
     window.playerFPS.attackCooldown = 15; 
-    window.playerFPS.stamina -= 12; 
+    window.playerFPS.stamina -= 10; 
     
     let glove = document.getElementById(hand + "-glove");
     if(glove) { glove.classList.add(`glove-punch-${hand}`); setTimeout(() => glove.classList.remove(`glove-punch-${hand}`), 150); }
     window.playSound(350, 'sine', 0.1, 0.3);
 
     let e = window.enemies[0];
-    if (e && e.hp > 0 && window.enemyZ <= 85) { 
+    // Đã tăng tầm đánh lên 90 để 2 bên dễ chạm nhau hơn
+    if (e && e.hp > 0 && window.enemyZ <= 90) { 
         
-        // ĐỊCH XỬ LÝ NÉ/ĐỠ
         if (e.attackTimer <= 0 && e.hitStun <= 0 && (!e.dodgeTimer || e.dodgeTimer <= 0)) {
             let defenseRoll = Math.random();
-            
-            if (defenseRoll < 0.35) { // 35% Địch Né
+            if (defenseRoll < 0.30) { 
+                window.playerFPS.stamina -= 15; 
                 window.floatingTexts.push({ x: e.x, y: 150, text: "💨 SLIP!", color: "#bdc3c7", alpha: 1, vx: 0, vy: -2, font: "italic 900 30px Arial", life: 30 });
                 e.dodgeDir = Math.random() > 0.5 ? 1 : -1;
                 e.dodgeTimer = 35; 
                 e.baseTargetX = e.x; 
                 
-                // Địch Phản đòn
-                if (Math.random() < 0.65) {
-                    e.state = ['hook', 'uppercut'][Math.floor(Math.random()*2)]; 
-                    e.attackTimer = 25; 
-                    window.floatingTexts.push({ x: e.x, y: 180, text: "⚡ COUNTER!", color: "#ff4757", alpha: 1, vx: 0, vy: -2, font: "italic 900 28px Arial", life: 30 });
-                } else {
-                    e.state = 'dash';
+                if (Math.random() < 0.70) {
+                    setTimeout(() => {
+                        if (e.hp > 0 && !window.gameOver) {
+                            e.state = ['hook', 'uppercut'][Math.floor(Math.random()*2)]; 
+                            e.attackTimer = 20; 
+                            window.targetZ -= 25; // Địch lao tới phản đòn
+                            window.floatingTexts.push({ x: e.x, y: 180, text: "⚡ COUNTER!", color: "#ff4757", alpha: 1, vx: 0, vy: -2, font: "italic 900 28px Arial", life: 30 });
+                        }
+                    }, 150); 
                 }
-                return; // Bạn đánh trượt
+                return; 
             } 
-            else if (defenseRoll < 0.60) { // 25% Địch Đỡ đòn
+            else if (defenseRoll < 0.50) { 
                 window.floatingTexts.push({ x: e.x, y: 150, text: "🛡️ BLOCK!", color: "#3498db", alpha: 1, vx: 0, vy: -1, font: "900 30px Arial", life: 30 });
                 window.playSound(600, 'triangle', 0.2, 0.4, true);
                 window.targetZ += 8; 
@@ -83,6 +87,7 @@ window.punch = function(hand) {
         }
 
         // TÍNH TOÁN SÁT THƯƠNG
+        window.playerFPS.stamina -= 5; 
         let isCrit = Math.random() < 0.25; 
         let dmg = 40 * (isCrit ? 2 : 1);
         
@@ -92,20 +97,37 @@ window.punch = function(hand) {
         }
         
         e.hp -= dmg; 
-        e.state = 'hurt'; 
-        e.hitStun = isCrit ? 25 : 12; 
-        if (isCrit || e.attackTimer > 10) e.attackTimer = 0; 
         
-        window.targetZ += (isCrit ? 25 : 10); 
-        window.enemyZ += (isCrit ? 15 : 5); 
+        // 🌟 SUPER ARMOR: Nếu địch đang vung tay đấm (attackTimer > 0), chỉ có Chí mạng mới làm địch dừng lại!
+        if (isCrit) {
+            e.state = 'hurt'; 
+            e.hitStun = 25; 
+            e.attackTimer = 0; // Hủy chiêu địch
+            window.targetZ += 25; 
+            window.enemyZ += 15; 
+        } else {
+            // Nếu đấm thường, địch chỉ khựng nhẹ (hitStun = 3), và KHÔNG bị hủy chiêu! Địch vẫn sẽ đấm vào mặt bạn!
+            if (e.attackTimer <= 0) {
+                e.state = 'hurt'; 
+                e.hitStun = 10; 
+            }
+            window.targetZ += 5; 
+        }
+        
         e.targetLean = (Math.random() - 0.5) * 0.4; 
         
+        if (isCrit) {
+            window.isLoopRunning = false; 
+            setTimeout(() => { if(!window.gameOver) { window.isLoopRunning = true; requestAnimationFrame(window.gameLoopFPS); } }, 80); 
+        }
+
         window.shakeScreen(isCrit ? 15 : 8, isCrit ? 10 : 5);
         window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, "#ff003c", isCrit);
         window.floatingTexts.push({ x: e.x + (Math.random()*40-20), y: e.y - 120, text: isCrit ? `💥 -${dmg}` : `-${dmg}`, color: isCrit ? "#ff4757" : "#fff", alpha: 1, vx: 0, vy: -3, font: "900 35px Arial", life: 40 });
         
-        if (e.hp <= 0) { e.hp = 0; e.state = 'ko_falling'; e.koTimer = 100; e.vy = -10; window.matchResolved = true; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "K.O! BẠN ĐÃ THẮNG!", color: "#f1c40f", alpha: 1, vx: 0, vy: -1, font: "900 60px Arial", life: 180 }); }
+        if (e.hp <= 0) { e.hp = 0; e.state = 'ko_falling'; e.koTimer = 100; e.vy = -10; window.matchResolved = true; window.gameOver = true; window.isLoopRunning = true; window.floatingTexts.push({ x: 400, y: 200, text: "K.O! BẠN ĐÃ THẮNG!", color: "#f1c40f", alpha: 1, vx: 0, vy: -1, font: "900 60px Arial", life: 180 }); }
     } else {
+        window.playerFPS.stamina -= 15; 
         window.floatingTexts.push({ x: window.canvas.width/2 + (hand==='left'? -80:80), y: window.canvas.height/2, text: "MISS!", color: "#7f8c8d", alpha: 1, vx: 0, vy: -1, font: "bold 25px Arial", life: 25 });
     }
 };
@@ -118,37 +140,28 @@ window.blockFPS = function() {
     document.addEventListener('mouseup', releaseBlock); document.addEventListener('touchend', releaseBlock);
 };
 
-// 🌟 HÀM LÁCH NÉ CỦA CAMERA MÀN HÌNH CHÍNH (ĐIỆN ẢNH)
 window.dodgeFPS = function() {
     if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver) return;
-    window.playerFPS.isDodging = true; 
-    window.playerFPS.iFrames = 30; // Vô địch trong 30 khung hình
-    window.playerFPS.stamina -= 20;
+    window.playerFPS.isDodging = true; window.playerFPS.iFrames = 30; window.playerFPS.stamina -= 20;
     
-    // Kích hoạt bộ đếm thời gian để Camera lướt ngang và nghiêng ngả
     window.playerFPS.dodgeDir = Math.random() > 0.5 ? 1 : -1;
     window.playerFPS.dodgeTimer = 35; 
-    
     window.playSound(200, 'sine', 0.2, 0.4);
     
-    // Tự động Phản đòn! (Khi máy quay lướt ra xa sẽ tự động đấm móc vào)
-    if (Math.random() < 0.7) { // 70% tỷ lệ phản đòn
-        setTimeout(() => { 
-            let counterHand = window.playerFPS.dodgeDir === 1 ? 'right' : 'left';
-            window.punch(counterHand); 
-        }, 200); 
+    if (Math.random() < 0.7) { 
+        setTimeout(() => { let counterHand = window.playerFPS.dodgeDir === 1 ? 'right' : 'left'; window.punch(counterHand); }, 200); 
     }
-
     setTimeout(() => { window.playerFPS.isDodging = false; }, 400);
 };
 
 // ==========================================
-// 3. VÒNG LẶP UPDATE TỔNG 
+// 3. VÒNG LẶP UPDATE (XỬ LÝ ĐỔI ĐÒN VÀ AI)
 // ==========================================
 window.update = function() {
     if (!window.canvas) { window.canvas = document.getElementById("battleCanvas"); if(window.canvas) window.ctx = window.canvas.getContext("2d"); } 
     if (!window.canvas || !window.ctx) return; 
 
+    if (window.damageFlashAlpha > 0) window.damageFlashAlpha -= 0.05; // Mờ dần chớp đỏ màn hình
     if (window.koGlitchTimer > 0) window.koGlitchTimer--;
     if (window.introTimer > 0) { window.introTimer--; if (window.introTimer === 60) { window.playSound(100, 'sine', 0.5, 0.5, true); window.shakeScreen(15, 10); } return; }
 
@@ -160,99 +173,75 @@ window.update = function() {
 
     let e = window.enemies[0];
 
-    // ===================================================
-    // 🌟 THUẬT TOÁN CAMERA ĐIỆN ẢNH VÀ NHỊP THỞ
-    // ===================================================
+    // --- CAMERA ---
     let targetCamX = 0; let targetCamY = 0; let targetTilt = 0; let targetZoom = 1.0;
-
-    // 1. Nhịp thở tĩnh
-    targetCamY += Math.sin(window.matchTimer * 0.03) * 3;
-    targetCamX += Math.cos(window.matchTimer * 0.02) * 2;
+    targetCamY += Math.sin(window.matchTimer * 0.03) * 3; targetCamX += Math.cos(window.matchTimer * 0.02) * 2;
 
     if (e && e.hp > 0) {
-        // Camera Lock-on (Bám mục tiêu mượt)
         let enemyOffsetX = e.x - 400; 
-        targetCamX += enemyOffsetX * 0.45; 
-        targetTilt += (enemyOffsetX / 400) * 0.08;
-
+        targetCamX += enemyOffsetX * 0.45; targetTilt += (enemyOffsetX / 400) * 0.08;
         document.documentElement.style.setProperty('--enemy-offset-x', `${enemyOffsetX * 0.5}px`);
         document.documentElement.style.setProperty('--enemy-tilt-rad', `${(enemyOffsetX / 400) * 0.15}rad`);
     }
 
-    // 🌟 2. BẠN NÉ ĐÒN: Camera lướt hình Sin, Màn hình nghiêng đổ ngả 
     if (window.playerFPS.dodgeTimer > 0) {
         window.playerFPS.dodgeTimer--;
         let phase = Math.sin((window.playerFPS.dodgeTimer / 35) * Math.PI); 
-        targetCamX += window.playerFPS.dodgeDir * 240 * phase; // Lướt ngang siêu rộng
-        targetTilt += window.playerFPS.dodgeDir * 0.25 * phase; // Nghiêng hẳn đầu 15 độ!
-        targetCamY += 35 * phase; // Cúi thấp người
-        targetZoom = 1.08; // Phóng to màn hình tránh hở viền
+        targetCamX += window.playerFPS.dodgeDir * 240 * phase; 
+        targetTilt += window.playerFPS.dodgeDir * 0.25 * phase; 
+        targetCamY += 35 * phase; targetZoom = 1.08; 
     }
 
-    // 3. Camera gập gối khi Bước chân
     if (window.playerFPS.moveTimer > 0) {
         window.playerFPS.moveTimer--;
         let phase = Math.sin((window.playerFPS.moveTimer / 25) * Math.PI);
-        targetCamY += 15 * phase; 
-        targetZoom = 1.03; 
+        targetCamY += 15 * phase; targetZoom = 1.03; 
     }
 
-    // NỘI SUY BIẾN GỐC CAMERA LÊN CSS
-    window.camX += (targetCamX - window.camX) * 0.12;
-    window.camY += (targetCamY - window.camY) * 0.12;
-    window.cameraTilt += (targetTilt - window.cameraTilt) * 0.12;
-    window.camZoom += (targetZoom - window.camZoom) * 0.1;
-    window.enemyZ += (window.targetZ - window.enemyZ) * 0.12; // Tiến lùi mượt
+    window.camX += (targetCamX - window.camX) * 0.12; window.camY += (targetCamY - window.camY) * 0.12;
+    window.cameraTilt += (targetTilt - window.cameraTilt) * 0.12; window.camZoom += (targetZoom - window.camZoom) * 0.1;
+    window.enemyZ += (window.targetZ - window.enemyZ) * 0.12; 
 
     let wrapper = document.querySelector(".canvas-wrapper");
     if (wrapper) { wrapper.style.transform = `scale(${window.camZoom}) translate(${-window.camX}px, ${window.camY}px) rotate(${-window.cameraTilt}rad)`; }
 
-    // ===================================================
-    // VÙNG LOGIC: AI BẠN VS AI ĐỊCH (GIAO TRANH SONG SONG)
-    // ===================================================
+    // --- 🌟 AI NGƯỜI CHƠI ---
     if (e && e.hp > 0 && !window.gameOver && window.introTimer <= 0) {
-        
-        // --- 🌟 AI CỦA BẠN ---
         if (!window.playerFPS.aiStateTimer) window.playerFPS.aiStateTimer = 0;
         if (window.playerFPS.aiStateTimer > 0) window.playerFPS.aiStateTimer--;
 
         if (!window.playerFPS.isBlocking && e.hitStun <= 0 && (!window.playerFPS.dodgeTimer || window.playerFPS.dodgeTimer <= 0)) {
             if (window.playerFPS.aiStateTimer <= 0) {
-                window.playerFPS.aiStateTimer = Math.floor(15 + Math.random() * 25); 
+                window.playerFPS.aiStateTimer = Math.floor(20 + Math.random() * 20); 
                 
-                // ĐỊCH ĐANG ĐÁNH -> Bạn phản ứng
+                // Nếu địch đang chuẩn bị đấm -> Phản ứng tự vệ
                 if (e.attackTimer > 5 && e.attackTimer < 18) { 
                     let defendRoll = Math.random();
-                    if (defendRoll < 0.20 && window.playerFPS.stamina > 20) {
+                    if (defendRoll < 0.25 && window.playerFPS.stamina > 20) {
                         window.blockFPS();
                         setTimeout(() => { window.playerFPS.isBlocking = false; document.getElementById("left-glove").classList.remove("glove-block-left"); document.getElementById("right-glove").classList.remove("glove-block-right"); }, 400);
-                    } else if (defendRoll < 0.65) {
-                        // Gọi hàm Né: Camera sẽ lách sang 1 bên!
+                    } else if (defendRoll < 0.70) {
                         window.floatingTexts.push({ x: window.canvas.width/2, y: window.canvas.height/2 + 50, text: "💨 BẠN LÁCH NÉ!", color: "#f1c40f", alpha: 1, vx: 0, vy: -2, font: "900 25px Arial", life: 30 });
                         window.dodgeFPS(); 
                     }
                 } 
-                // ĐỊCH SƠ HỞ -> Bạn tấn công
                 else if (window.playerFPS.stamina > 30) { 
-                    if (window.enemyZ > 65) {
+                    if (window.enemyZ > 75) {
                         window.moveFPS(-1); 
                         window.playerFPS.aiStateTimer = 10; 
                     } else {
                         let hand = Math.random() > 0.5 ? 'left' : 'right';
                         window.punch(hand);
-                        window.playerFPS.aiStateTimer = 20; 
+                        window.playerFPS.aiStateTimer = 25; 
                     }
-                } 
-                // YẾU SỨC -> Lùi
-                else {
-                    window.moveFPS(1); 
-                    window.playerFPS.aiStateTimer = 40; 
+                } else {
+                    window.moveFPS(1); window.playerFPS.aiStateTimer = 40; 
                 }
             }
         }
     }
 
-    // --- 🌟 AI KẺ ĐỊCH ---
+    // --- 🌟 AI KẺ ĐỊCH (CỰC KỲ KHÁT MÁU) ---
     if (e && e.hp > 0 && !window.gameOver) {
         if (!e.baseTargetX) e.baseTargetX = 400;
         if (!e.targetX) e.targetX = 400;
@@ -263,20 +252,14 @@ window.update = function() {
             e.hitStun--; if(e.hitStun <= 0) e.state = 'idle'; 
         } 
         else {
-            // 1. Nếu Địch lách né (Đường cong Sin)
             if (e.dodgeTimer && e.dodgeTimer > 0) { 
                 e.dodgeTimer--; 
                 let phase = Math.sin((e.dodgeTimer / 35) * Math.PI); 
-                e.targetX = e.baseTargetX + e.dodgeDir * 240 * phase; // Lướt ngang xa ra mép
-                e.targetLean = e.dodgeDir * 0.55 * phase; // Cổ ngả sâu về bên lách
+                e.targetX = e.baseTargetX + e.dodgeDir * 240 * phase; 
+                e.targetLean = e.dodgeDir * 0.55 * phase; 
                 
-                // Địch tung Phản đòn trong lúc né
-                if (e.attackTimer > 0) {
-                    e.attackTimer--;
-                    if (e.attackTimer === 8) window.enemyAttackAction(e); 
-                }
+                if (e.attackTimer > 0) { e.attackTimer--; if (e.attackTimer === 8) window.enemyAttackAction(e); }
             } 
-            // 2. Đi bộ và tấn công bình thường
             else {
                 if (e.attackTimer > 0) {
                     e.attackTimer--;
@@ -285,15 +268,17 @@ window.update = function() {
                 else {
                     if (window.matchTimer % 45 === 0) {
                         e.baseTargetX = 400 + (Math.random() - 0.5) * 180; 
-                        if (window.enemyZ > 60) window.targetZ = 40; 
-                        else if (Math.random() < 0.15) window.targetZ = 100; 
+                        
+                        // Địch khát máu hơn: Tỷ lệ lao vào cận chiến cao hơn
+                        if (window.enemyZ > 65) window.targetZ = 35; 
+                        else if (Math.random() < 0.1) window.targetZ = 95; 
                     }
                     e.targetX = e.baseTargetX;
                     e.targetLean = -(e.x - 400) * 0.002; 
-
                     e.targetX += Math.sin(window.matchTimer * 0.05) * 5; 
                     
-                    if (window.enemyZ <= 70 && Math.random() < 0.12) { 
+                    // 🌟 TẦN SUẤT ĐỊCH TUNG ĐÒN RẤT CAO
+                    if (window.enemyZ <= 85 && Math.random() < 0.15) { 
                         e.state = ['punch', 'cross', 'hook', 'uppercut'][Math.floor(Math.random()*4)]; 
                         e.attackTimer = 22; 
                         e.targetLean = (Math.random() - 0.5) * 0.4; 
@@ -322,7 +307,7 @@ window.update = function() {
 
 // Hàm tính sát thương khi Địch đánh trúng Bạn
 window.enemyAttackAction = function(e) {
-    if (window.playerFPS.iFrames > 0 || window.playerFPS.isDodging || window.enemyZ > 85) { 
+    if (window.playerFPS.iFrames > 0 || window.playerFPS.isDodging || window.enemyZ > 90) { 
         window.floatingTexts.push({ x: 400, y: 200, text: "MISS!", color: "#bdc3c7", alpha: 1, vx: 0, vy: -2, font: "900 35px Arial", life: 40 }); 
         window.targetZ += 15; e.targetLean = (Math.random() - 0.5) * 0.2;
     } 
@@ -331,10 +316,17 @@ window.enemyAttackAction = function(e) {
         window.targetZ += 15; 
     } 
     else {
-        let dmg = Math.floor((18 + Math.random() * 8) * e.dmgMod); 
+        // ĐỊCH ĐÁNH TRÚNG BẠN!
+        let dmg = Math.floor((22 + Math.random() * 8) * e.dmgMod); 
         if (window.enemyZ >= 190) { dmg = Math.floor(dmg * 1.3); window.floatingTexts.push({ x: 400, y: 230, text: "💥 BỊ ÉP GÓC ĐAU ĐỚN!", color: "#ff4d4d", alpha: 1, vx: 0, vy: -1, font: "bold 25px Arial", life: 30 }); }
         
-        window.playerFPS.hp -= dmg; window.shakeScreen(25, 18); window.playSound(150, 'square', 0.3, 0.8, true);
+        window.playerFPS.hp -= dmg; 
+        window.shakeScreen(28, 20); 
+        window.playSound(150, 'square', 0.3, 0.8, true);
+        
+        // Kích hoạt chớp đỏ màn hình
+        window.damageFlashAlpha = 0.6;
+        
         let crack = document.getElementById("screen-crack"); if(crack) { crack.style.opacity = 1; setTimeout(() => crack.style.opacity = 0, 300); }
         if (window.playerFPS.hp <= 0) { window.playerFPS.hp = 0; window.gameOver = true; window.koGlitchTimer = 60; window.floatingTexts.push({ x: 400, y: 200, text: "VÕ SĨ CỦA BẠN ĐÃ GỤC!", color: "#ff4757", alpha: 1, vx: 0, vy: -1, font: "900 40px Arial", life: 180 }); }
     }
@@ -376,6 +368,12 @@ window.draw = function() {
 
     window.particles.forEach(pt => { window.ctx.globalAlpha = Math.max(0, Math.min(1, pt.life / pt.maxLife)); window.ctx.fillStyle = pt.color; window.ctx.beginPath(); window.ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI*2); window.ctx.fill(); }); window.ctx.globalAlpha = 1.0;
     window.floatingTexts.forEach(t => { window.ctx.font = t.font || "900 22px Arial"; window.ctx.fillStyle = t.color; window.ctx.shadowBlur = 5; window.ctx.shadowColor = t.color; window.ctx.globalAlpha = Math.max(0, t.alpha); window.ctx.textAlign = "center"; window.ctx.fillText(t.text, t.x, t.y); window.ctx.shadowBlur = 0; }); window.ctx.globalAlpha = 1.0;
+
+    // 🌟 HIỆU ỨNG CHỚP ĐỎ KHI MẤT MÁU
+    if (window.damageFlashAlpha > 0 && !window.gameOver) {
+        window.ctx.fillStyle = `rgba(255, 0, 0, ${window.damageFlashAlpha})`;
+        window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height);
+    }
 
     if (window.koGlitchTimer > 0) { window.ctx.fillStyle = `rgba(255, 0, 0, ${window.koGlitchTimer / 100})`; window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height); window.ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; for(let i=0; i<window.canvas.height; i+=5) { window.ctx.fillRect(0, i, window.canvas.width, 1); } }
 
