@@ -1,6 +1,6 @@
 // ==========================================
-// GRAPHICS_V3.JS - THE ULTIMATE CHARACTER FORGE (V4.0)
-// [ĐỈNH CAO: TÙY BIẾN THỂ HÌNH, HÀO QUANG, TRANG PHỤC, HÌNH XĂM TỪ FILE CONFIG]
+// GRAPHICS_V3.JS - THE ULTIMATE BATTLE DAMAGE (V5.0)
+// [ĐỈNH CAO: NHÂN VẬT CHẢY MÁU, RÁCH ÁO, ĐỔ MỒ HÔI, NHỊP THỞ MỆT MỎI THEO % MÁU]
 // ==========================================
 
 window.drawBoxingRing = function(ctx, canvasWidth, canvasHeight) {
@@ -53,25 +53,37 @@ window.drawBoxingRing = function(ctx, canvasWidth, canvasHeight) {
 };
 
 window.drawBaseLimbFPS = function(p) {
-    let bounce = (p.state === 'walk' || p.state === 'dash') ? Math.sin(Date.now() / 120) * 6 : Math.sin(Date.now() / 250) * 3; 
+    // TÍNH TÁN TỶ LỆ MÁU ĐỂ ÁP DỤNG MỆT MỎI (EXHAUSTION)
+    let hpRatio = (p.hp !== undefined && p.maxHp) ? Math.max(0, p.hp / p.maxHp) : 1;
+    let isExhausted = hpRatio < 0.35; // Dưới 35% máu sẽ thở dốc
     
-    // Tự động scale khung xương theo thể hình (bodyType)
+    // Nhịp thở mệt mỏi sẽ nặng nề và chậm hơn
+    let bounceSpeed = isExhausted ? 250 : 120;
+    let bounceMag = isExhausted ? 8 : (p.state === 'walk' || p.state === 'dash' ? 6 : 3);
+    let bounce = Math.sin(Date.now() / bounceSpeed) * bounceMag; 
+    
+    // Gập cổ, buông thõng vai khi mệt
+    let exhaustLean = (isExhausted && p.state === 'idle') ? 12 : 0; 
+    
     let bType = p.bodyType || 'muscular';
-    let sW = bType === 'heavy' ? 45 : (bType === 'lean' ? 32 : 38); // Chiều rộng vai
-    let hY = bType === 'heavy' ? -150 : -140; // Chiều cao đầu
+    let sW = bType === 'heavy' ? 45 : (bType === 'lean' ? 32 : 38); 
+    let hY = bType === 'heavy' ? -150 : -140; 
     
-    let head = { x: 0, y: hY + bounce, z: 1 }; let neck = { x: 0, y: -100 + bounce, z: 1 }; let pelvis = { x: 0, y: -20 + bounce, z: 1 };
-    let shoulderL = { x: -sW, y: -100 + bounce }; let shoulderR = { x: sW, y: -100 + bounce };
+    let head = { x: 0, y: hY + bounce + exhaustLean, z: 1 }; 
+    let neck = { x: 0, y: -100 + bounce + exhaustLean*0.5, z: 1 }; 
+    let pelvis = { x: 0, y: -20 + bounce, z: 1 };
+    let shoulderL = { x: -sW, y: -100 + bounce + exhaustLean*0.8 }; 
+    let shoulderR = { x: sW, y: -100 + bounce + exhaustLean*0.8 };
     let footL = { x: -45, y: 0, z: 1 }; let kneeL = { x: -50, y: -15 + bounce, z: 1 }; 
     let footR = { x: 45, y: 0, z: 1 }; let kneeR = { x: 50, y: -15 + bounce, z: 1 };
-    let handL = { x: -35, y: -110 + bounce, z: 1 }; let elbowL = { x: -60, y: -65 + bounce, z: 1 }; 
-    let handR = { x: 35, y: -110 + bounce, z: 1 }; let elbowR = { x: 60, y: -65 + bounce, z: 1 };
+    let handL = { x: -35, y: -110 + bounce + exhaustLean, z: 1 }; let elbowL = { x: -60, y: -65 + bounce, z: 1 }; 
+    let handR = { x: 35, y: -110 + bounce + exhaustLean, z: 1 }; let elbowR = { x: 60, y: -65 + bounce, z: 1 };
 
     let progress = (p.attackTimer > 0) ? 1 - (p.attackTimer / (p.maxT || 22)) : 0;
     let ext = progress > 0 ? (progress < 0.4 ? Math.sin((progress / 0.4) * (Math.PI / 2)) : 1 - Math.pow((progress - 0.4) / 0.6, 2)) : 0;
 
-    if (p.state === 'punch' || p.state === 'cross' || p.state === 'jab') { handR.x -= 38 * ext; handR.y += 50 * ext; handR.z = 1 + (ext * 5.5); shoulderR.x += 15 * ext; head.x = -15 * ext; } 
-    else if (p.state === 'hook' || p.state === 'uppercut') { handL.x += 70 * ext; handL.y -= 30 * ext; handL.z = 1 + (ext * 4.5); shoulderL.x -= 15 * ext; head.x = 25 * ext; }
+    if (p.state === 'punch' || p.state === 'cross' || p.state === 'jab') { handR.x -= 38 * ext; handR.y += 50 * ext; handR.z = 1 + (ext * 5.5); shoulderR.x += 15 * ext; head.x = -15 * ext; head.y -= exhaustLean; } 
+    else if (p.state === 'hook' || p.state === 'uppercut') { handL.x += 70 * ext; handL.y -= 30 * ext; handL.z = 1 + (ext * 4.5); shoulderL.x -= 15 * ext; head.x = 25 * ext; head.y -= exhaustLean; }
     else if (p.state === 'hurt') { head.y -= 15; head.x = (Math.random() - 0.5) * 20; handL.y = -30; handL.x = -65; handR.y = -30; handR.x = 65; }
     else if (p.state === 'ko_falling' || p.state === 'dead') { head.y = -20; head.x = 40; handL.y = 15; handR.y = 15; kneeL.y = 5; kneeR.y = 5; }
 
@@ -79,7 +91,7 @@ window.drawBaseLimbFPS = function(p) {
 };
 
 // ==========================================
-// 🌟 LÒ RÈN NHÂN VẬT (RENDER THEO THÔNG SỐ CONFIG)
+// 🌟 LÒ RÈN NHÂN VẬT & BATTLE DAMAGE
 // ==========================================
 window.drawStickman = function(ctx, p, isTrail = false) {
     if(!p || isNaN(p.x) || isNaN(p.y)) return; ctx.save(); ctx.translate(p.x, p.y); 
@@ -87,11 +99,7 @@ window.drawStickman = function(ctx, p, isTrail = false) {
     let pts = window.drawBaseLimbFPS(p); 
     let { head, neck, pelvis, shoulderL, shoulderR, footL, kneeL, footR, kneeR, handL, elbowL, handR, elbowR } = pts;
 
-    // --- ĐỌC CẤU HÌNH TỪ FILE CHARACTER ---
-    let bType = p.bodyType || 'muscular'; // lean, muscular, heavy
-    let pType = p.pantsType || 'boxing';  // boxing, muaythai, long
-    let aura = p.auraType || 'none';      // none, fire, god, lightning
-    
+    let bType = p.bodyType || 'muscular'; let pType = p.pantsType || 'boxing'; let aura = p.auraType || 'none'; 
     let wArm = bType === 'heavy' ? 18 : (bType === 'lean' ? 10 : 14);
     let wLeg = bType === 'heavy' ? 20 : (bType === 'lean' ? 12 : 16);
     let torsoW = bType === 'heavy' ? 30 : (bType === 'lean' ? 18 : 22);
@@ -99,20 +107,22 @@ window.drawStickman = function(ctx, p, isTrail = false) {
     let sColor = p.skinColor || "#f1c27d", jColor = p.jerseyColor || p.color || "#0984e3"; 
     let pColor = p.pantsColor || "#1e272e", sockC = p.socksColor || "#fff", shoeC = p.shoesColor || "#f1c40f";
 
-    // 1. VẼ HÀO QUANG (AURA TỐI THƯỢNG) NẾU CÓ
+    // 🌟 PHẦN TRĂM MÁU HIỆN TẠI ĐỂ TÍNH TOÁN ĐỘ TƠI TẢ
+    let hpRatio = (p.hp !== undefined && p.maxHp) ? Math.max(0, p.hp / p.maxHp) : 1;
+
+    // 1. VẼ HÀO QUANG (AURA) NẾU CÓ
     if (aura !== 'none' && !isTrail && p.hp > 0) {
         let aColor = aura === 'fire' ? "#ff4757" : (aura === 'god' ? "#f1c40f" : "#00f3ff");
         let aSize = Math.sin(Date.now() / 100) * 10 + 60;
-        ctx.shadowBlur = 40; ctx.shadowColor = aColor; ctx.fillStyle = aColor;
-        ctx.globalAlpha = 0.3;
+        ctx.shadowBlur = 40; ctx.shadowColor = aColor; ctx.fillStyle = aColor; ctx.globalAlpha = hpRatio < 0.3 ? 0.8 : 0.3; // Aura bùng cháy mạnh khi sắp chết
         ctx.beginPath(); ctx.ellipse(0, -60, aSize, aSize * 1.5, 0, 0, Math.PI*2); ctx.fill();
         ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
     }
 
     if (!isTrail && p.hp > 0 && p.state !== 'ko_falling') { ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; ctx.beginPath(); ctx.ellipse(0, 5, 55, 15, 0, 0, Math.PI*2); ctx.fill(); }
 
-    // 🌟 HÀM RENDER CƠ BẮP CÓ ĐỔ BÓNG RIM LIGHT
-    const draw3DLimb = (start, end, width, color, isTattoo = false) => {
+    // 🌟 HÀM RENDER CƠ BẮP + VẾT THƯƠNG RỈ MÁU
+    const draw3DLimb = (start, end, width, color, isSkin = false) => {
         let dx = end.x - start.x; let dy = end.y - start.y;
         let len = Math.sqrt(dx*dx + dy*dy); let angle = Math.atan2(dy, dx);
         ctx.save(); ctx.translate(start.x, start.y); ctx.rotate(angle);
@@ -122,121 +132,131 @@ window.drawStickman = function(ctx, p, isTrail = false) {
         grad.addColorStop(0.7, color); grad.addColorStop(1, "rgba(0,0,0,0.7)");
 
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.lineWidth = width + 5; ctx.strokeStyle = "#000"; // Viền đen ngoài
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
-        
-        ctx.lineWidth = width; ctx.strokeStyle = grad; // Lõi cơ bắp
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+        ctx.lineWidth = width + 5; ctx.strokeStyle = "#000"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+        ctx.lineWidth = width; ctx.strokeStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
 
-        // Vẽ hình xăm Yakuza/Tribal nếu được kích hoạt
-        if (isTattoo) {
-            ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,0.6)";
-            for(let t=10; t<len-10; t+=15) {
-                ctx.beginPath(); ctx.moveTo(t, -width/3); ctx.quadraticCurveTo(t+10, 0, t, width/3); ctx.stroke();
+        // 🌟 BATTLE DAMAGE LÊN DA THỊT
+        if (isSkin && hpRatio <= 0.6) {
+            // Vết bầm tím (Dưới 60% máu)
+            ctx.lineWidth = width * 0.4; ctx.strokeStyle = "rgba(75, 0, 130, 0.35)"; 
+            ctx.beginPath(); ctx.moveTo(len * 0.3, -width/4); ctx.lineTo(len * 0.6, 0); ctx.stroke();
+            
+            // Vết xước rỉ máu đỏ tươi (Dưới 30% máu)
+            if (hpRatio <= 0.3) {
+                ctx.lineWidth = 2; ctx.strokeStyle = "rgba(220, 0, 0, 0.8)";
+                ctx.beginPath(); ctx.moveTo(len * 0.4, width/4); ctx.lineTo(len * 0.7, -width/5); ctx.stroke();
+                // Giọt máu nhỏ giọt
+                ctx.fillStyle = "rgba(220, 0, 0, 0.8)";
+                ctx.beginPath(); ctx.arc(len * 0.55, width/2 + 2, 2, 0, Math.PI*2); ctx.fill();
             }
         }
         
-        // Rim light ảo diệu tạo khối
-        ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(255,255,255,0.4)";
-        ctx.beginPath(); ctx.moveTo(0, -width/3); ctx.lineTo(len, -width/3); ctx.stroke();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.beginPath(); ctx.moveTo(0, -width/3); ctx.lineTo(len, -width/3); ctx.stroke();
         ctx.restore();
     };
 
-    // 2. VẼ CHÂN VÀ TAY
+    // VẼ CHÂN VÀ TAY (Kèm cờ isSkin để nhận sát thương)
     let isLongPants = pType === 'long';
-    draw3DLimb(pelvis, kneeL, wLeg, isLongPants ? pColor : sColor); 
-    draw3DLimb(kneeL, footL, wLeg - 2, isLongPants ? pColor : sockC); 
-    draw3DLimb(pelvis, kneeR, wLeg, isLongPants ? pColor : sColor); 
-    draw3DLimb(kneeR, footR, wLeg - 2, isLongPants ? pColor : sockC); 
+    draw3DLimb(pelvis, kneeL, wLeg, isLongPants ? pColor : sColor, !isLongPants); 
+    draw3DLimb(kneeL, footL, wLeg - 2, isLongPants ? pColor : sockC, false); 
+    draw3DLimb(pelvis, kneeR, wLeg, isLongPants ? pColor : sColor, !isLongPants); 
+    draw3DLimb(kneeR, footR, wLeg - 2, isLongPants ? pColor : sockC, false); 
 
-    let hasTattoo = p.hasTattoos === true;
-    draw3DLimb(shoulderL, elbowL, wArm, sColor, hasTattoo); draw3DLimb(elbowL, handL, wArm - 2, sColor);
-    draw3DLimb(shoulderR, elbowR, wArm, sColor, hasTattoo); draw3DLimb(elbowR, handR, wArm - 2, sColor);
+    draw3DLimb(shoulderL, elbowL, wArm, sColor, true); draw3DLimb(elbowL, handL, wArm - 2, sColor, true);
+    draw3DLimb(shoulderR, elbowR, wArm, sColor, true); draw3DLimb(elbowR, handR, wArm - 2, sColor, true);
 
-    // 3. VẼ QUẦN ĐÙI (Dựa trên loại quần)
+    // VẼ QUẦN ĐÙI
     if (!isLongPants) {
         ctx.fillStyle = pColor; ctx.lineWidth = 5; ctx.strokeStyle = "#000"; ctx.lineJoin = "round";
-        ctx.beginPath();
-        let shortLen = pType === 'muaythai' ? -10 : -15; // Muay Thái quần ngắn và ống loe hơn
-        let flare = pType === 'muaythai' ? 18 : 12;
-        
+        ctx.beginPath(); let shortLen = pType === 'muaythai' ? -10 : -15; let flare = pType === 'muaythai' ? 18 : 12;
         ctx.moveTo(pelvis.x - 24, pelvis.y - 8); ctx.lineTo(pelvis.x + 24, pelvis.y - 8);
         ctx.lineTo(kneeR.x + flare, kneeR.y + shortLen); ctx.lineTo(pelvis.x, pelvis.y + 18); ctx.lineTo(kneeL.x - flare, kneeL.y + shortLen);
         ctx.closePath(); ctx.fill(); ctx.stroke();
+        
+        // 🌟 BATTLE DAMAGE QUẦN BỊ RÁCH (Dưới 45% máu)
+        if (hpRatio <= 0.45) {
+            ctx.fillStyle = sColor; // Màu da hở ra
+            ctx.beginPath(); ctx.moveTo(pelvis.x + 12, pelvis.y - 2); ctx.lineTo(pelvis.x + 22, pelvis.y + 10); ctx.lineTo(pelvis.x + 8, pelvis.y + 5); ctx.fill();
+        }
     }
 
-    // Đai lưng vô địch (Championship Belt)
+    // Đai lưng vô địch
     ctx.lineWidth = 4; ctx.fillStyle = p.hasChampBelt ? "#f1c40f" : "#111";
     ctx.beginPath(); ctx.roundRect(pelvis.x - 25, pelvis.y - 8, 50, 10, 4); ctx.fill(); ctx.stroke();
-    if (p.beltText) {
-        ctx.fillStyle = p.hasChampBelt ? "#000" : "#fff"; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(p.beltText, pelvis.x, pelvis.y - 3);
-    }
 
-    // 4. VẼ THÂN TRÊN (Áo đấu hoặc cởi trần sáu múi)
+    // VẼ THÂN TRÊN ÁO ĐẤU
     let chestGrad = ctx.createLinearGradient(shoulderL.x, 0, shoulderR.x, 0);
     let tColor = p.isShirtless ? sColor : jColor;
     chestGrad.addColorStop(0, "rgba(0,0,0,0.5)"); chestGrad.addColorStop(0.5, tColor); chestGrad.addColorStop(1, "rgba(0,0,0,0.5)");
-    
     ctx.fillStyle = chestGrad; ctx.lineWidth = 5; ctx.strokeStyle = "#000";
-    ctx.beginPath();
-    ctx.moveTo(shoulderL.x - 8, shoulderL.y - 5); 
-    ctx.quadraticCurveTo(0, neck.y + 15, shoulderR.x + 8, shoulderR.y - 5); 
-    ctx.lineTo(pelvis.x + torsoW, pelvis.y - 8); 
-    ctx.lineTo(pelvis.x - torsoW, pelvis.y - 8); 
-    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(shoulderL.x - 8, shoulderL.y - 5); ctx.quadraticCurveTo(0, neck.y + 15, shoulderR.x + 8, shoulderR.y - 5); 
+    ctx.lineTo(pelvis.x + torsoW, pelvis.y - 8); ctx.lineTo(pelvis.x - torsoW, pelvis.y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    // Chi tiết sáu múi và cơ ngực nếu cởi trần
-    if (p.isShirtless && (bType === 'muscular' || bType === 'lean')) {
-        ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,0.4)";
-        // Cơ ngực
-        ctx.beginPath(); ctx.moveTo(0, shoulderL.y + 15); ctx.lineTo(shoulderL.x + 10, shoulderL.y + 10); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, shoulderR.y + 15); ctx.lineTo(shoulderR.x - 10, shoulderR.y + 10); ctx.stroke();
-        // Sáu múi
-        ctx.beginPath(); ctx.moveTo(0, shoulderL.y + 15); ctx.lineTo(0, pelvis.y - 8); ctx.stroke(); // Rãnh bụng
-        for(let a=0; a<3; a++) {
-            let abY = shoulderL.y + 30 + (a * 12);
-            ctx.beginPath(); ctx.moveTo(-10, abY); ctx.lineTo(10, abY); ctx.stroke();
+    // 🌟 BATTLE DAMAGE ÁO ĐẤU BỊ RÁCH TOẠC (Dưới 50% máu)
+    if (!p.isShirtless && hpRatio <= 0.5) {
+        ctx.fillStyle = sColor; // Màu da hở ra
+        ctx.beginPath(); // Rách nách trái
+        ctx.moveTo(shoulderL.x + 5, shoulderL.y + 10); ctx.lineTo(shoulderL.x + 18, shoulderL.y + 35); ctx.lineTo(shoulderL.x - 2, shoulderL.y + 25); ctx.fill();
+        if (hpRatio <= 0.25) { // Rách toạc bụng
+            ctx.beginPath(); ctx.moveTo(pelvis.x - 5, pelvis.y - 10); ctx.lineTo(pelvis.x + 15, pelvis.y - 35); ctx.lineTo(pelvis.x + 20, pelvis.y - 15); ctx.fill();
         }
-    } else if (!p.isShirtless && p.jerseyNumber) {
-        ctx.fillStyle = (p.id === "messi" || p.classId === "messi") ? "#111" : "#fff"; 
-        ctx.font = "900 28px 'Teko', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(p.jerseyNumber, 0, (shoulderL.y + pelvis.y) / 2 - 5);
     }
 
-    // 5. GIÀY THỂ THAO
+    // VẼ GIÀY
     const drawShoe = (footPt, angleMod) => {
         ctx.save(); ctx.translate(footPt.x, footPt.y); ctx.rotate(angleMod);
-        ctx.fillStyle = "#ecf0f1"; ctx.lineWidth = 3; ctx.strokeStyle = "#000";
-        ctx.beginPath(); ctx.roundRect(-16, 2, 32, 12, 6); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = shoeC;
-        ctx.beginPath(); ctx.moveTo(-12, 6); ctx.quadraticCurveTo(0, -12, 16, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.restore();
+        ctx.fillStyle = "#ecf0f1"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.beginPath(); ctx.roundRect(-16, 2, 32, 12, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = shoeC; ctx.beginPath(); ctx.moveTo(-12, 6); ctx.quadraticCurveTo(0, -12, 16, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     };
     drawShoe(footL, -0.1); drawShoe(footR, 0.1);
 
-    // 6. KHUÔN MẶT VÀ MẮT PHÁT SÁNG
+    // KHUÔN MẶT
     let faceSize = bType === 'heavy' ? 95 : 85; 
-    ctx.shadowBlur = 20; ctx.shadowColor = jColor; ctx.fillStyle = jColor;
-    ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2 + 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.shadowBlur = 20; ctx.shadowColor = jColor; ctx.fillStyle = jColor; ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2 + 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
 
     if (window.enemyFaceImg && window.enemyFaceImg.complete && window.enemyFaceImg.naturalWidth > 0) {
         ctx.save(); ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.closePath(); ctx.clip(); 
         ctx.drawImage(window.enemyFaceImg, head.x - faceSize/2, head.y - faceSize/2, faceSize, faceSize); ctx.restore();
         ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.lineWidth = 5; ctx.strokeStyle = "#000"; ctx.stroke();
         
-        // Mắt phát sáng (Terminator / God mode)
-        if (p.glowingEyes) {
-            ctx.shadowBlur = 15; ctx.shadowColor = p.glowingEyes; ctx.fillStyle = p.glowingEyes;
-            ctx.beginPath(); ctx.ellipse(head.x - 12, head.y - 5, 8, 3, Math.PI/8, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(head.x + 12, head.y - 5, 8, 3, -Math.PI/8, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
+        // 🌟 BATTLE DAMAGE LÊN KHUÔN MẶT TƠI TẢ
+        if (hpRatio <= 0.5) {
+            // Mắt bầm đen (Black Eye)
+            ctx.fillStyle = "rgba(75, 0, 130, 0.55)"; 
+            ctx.beginPath(); ctx.ellipse(head.x + 12, head.y - 8, 14, 10, 0.2, 0, Math.PI*2); ctx.fill();
+            
+            // Chảy máu miệng đỏ tươi (Dưới 30%)
+            if (hpRatio <= 0.3) {
+                ctx.strokeStyle = "rgba(200, 0, 0, 0.9)"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+                ctx.beginPath(); ctx.moveTo(head.x - 5, head.y + 15); 
+                ctx.quadraticCurveTo(head.x - 12, head.y + 25, head.x - 8, head.y + 35); ctx.stroke();
+                // Giọt máu rớt xuống cằm
+                ctx.fillStyle = "rgba(200, 0, 0, 0.9)";
+                ctx.beginPath(); ctx.arc(head.x - 8, head.y + 38, 2.5, 0, Math.PI*2); ctx.fill();
+            }
         }
     } else { 
         ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); 
     }
 
-    // 7. GĂNG TAY ĐẤM BỐC 3D (Z-Depth Scaling)
+    // 🌟 HIỆU ỨNG VÃ MỒ HÔI (SWEAT DROPS) KHI MỆT
+    if (hpRatio <= 0.45 && p.state !== 'ko_falling' && p.state !== 'dead') {
+        let sTime = Date.now() / 150;
+        // Giọt mồ hôi 1 văng ra từ thái dương
+        let sX1 = head.x - 30 + Math.sin(sTime) * 15;
+        let sY1 = head.y - 10 + (sTime * 25) % 45;
+        ctx.fillStyle = "rgba(200, 240, 255, 0.75)";
+        ctx.beginPath(); ctx.arc(sX1, sY1, 3.5, 0, Math.PI*2); ctx.fill();
+        
+        // Giọt mồ hôi 2 nếu cực kỳ kiệt sức
+        if (hpRatio <= 0.2) {
+            let sX2 = head.x + 25 + Math.cos(sTime) * 10;
+            let sY2 = head.y + 5 + (sTime * 30 + 20) % 50;
+            ctx.beginPath(); ctx.arc(sX2, sY2, 2.5, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    // GĂNG TAY ĐẤM BỐC 3D
     const drawRealImageGlove = (handPt, isRight) => {
         ctx.save(); ctx.translate(handPt.x, handPt.y); ctx.scale(handPt.z, handPt.z); 
         ctx.shadowBlur = 25; ctx.shadowColor = "rgba(0,0,0,0.8)"; 
