@@ -1,6 +1,6 @@
 // ==========================================
-// RECORDER.JS - CINEMATIC EDITION (V3)
-// [NÂNG CẤP: ĐỌC ẢNH GĂNG TAY TRỰC TIẾP TỪ FILE CHARACTER.JS CỦA NHÂN VẬT]
+// RECORDER.JS - CINEMATIC EDITION (V4 - ANTI CRASH)
+// [NÂNG CẤP: CHỐNG TRÀN RAM (START 1000ms), SỬA LỖI ĐỨNG VIDEO GIỮA TRẬN]
 // ==========================================
 
 window.mediaRecorderH = null; window.recordedChunksH = []; window.recordCanvasH = null; window.recordCtxH = null;
@@ -64,9 +64,14 @@ window.startRecording = function() {
     window.recordedChunksH = []; window.recordedChunksV = [];
     window.isRecording = true; 
     
+    // 🌟 SỬA LỖI CRASH VÒNG LẶP: Bọc Try/Catch để tránh lỗi tải ảnh làm chết máy quay
     const recordLoop = () => {
         if (!window.isRecording) return;
-        window.captureFrames(); 
+        try {
+            window.captureFrames(); 
+        } catch (err) {
+            console.warn("Bỏ qua lỗi khung hình Camera:", err);
+        }
         requestAnimationFrame(recordLoop);
     };
     recordLoop();
@@ -123,14 +128,24 @@ window.startRecording = function() {
     };
 
     window.mediaRecorderH.onstop = finalizeRecordings; window.mediaRecorderV.onstop = finalizeRecordings;
-    window.mediaRecorderH.start(); window.mediaRecorderV.start(); 
+    
+    // 🌟 SỬA TRÀN RAM: Gọi start(1000) thay vì start() để lưu bộ nhớ từng khối 1 giây
+    window.mediaRecorderH.start(1000); 
+    window.mediaRecorderV.start(1000); 
 };
 
 window.stopRecording = function() { 
     if (!window.isRecording) return; 
-    try { window.mediaRecorderH.requestData(); window.mediaRecorderV.requestData(); } catch(e){} 
-    window.mediaRecorderH.stop(); window.mediaRecorderV.stop(); 
-    window.isRecording = false;  
+    window.isRecording = false; 
+    
+    try { 
+        if(window.mediaRecorderH.state === "recording") window.mediaRecorderH.requestData(); 
+        if(window.mediaRecorderV.state === "recording") window.mediaRecorderV.requestData(); 
+        
+        if(window.mediaRecorderH.state !== "inactive") window.mediaRecorderH.stop(); 
+        if(window.mediaRecorderV.state !== "inactive") window.mediaRecorderV.stop(); 
+    } catch(e){ console.error("Lỗi khi dừng video:", e); } 
+    
     if (window.silenceOsc) { window.silenceOsc.stop(); window.silenceOsc = null; }
     if (window.bgmSourceNode) { window.bgmSourceNode.disconnect(); window.bgmSourceNode = null; }
 };
@@ -169,9 +184,8 @@ window.captureFrames = function() {
     let isBlockR = rightGlove && rightGlove.classList.contains("glove-block-right");
 
     const drawGloveImage = (ctx, isH, isLeft, state) => {
-        // 🌟 LẤY THẲNG ẢNH GĂNG TAY TỪ THUỘC TÍNH "gloveUrl" TRONG CHARACTER.JS
         let myChar = window.classStats ? window.classStats[window.selectedRedClass] : null;
-        let url = (myChar && myChar.gloveUrl) ? myChar.gloveUrl : 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png'; // Găng đỏ mặc định
+        let url = (myChar && myChar.gloveUrl) ? myChar.gloveUrl : 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png'; 
 
         if (!window.hudImages) window.hudImages = {};
         let myGloveObj = window.hudImages[url];
@@ -180,6 +194,9 @@ window.captureFrames = function() {
             window.hudImages[url] = myGloveObj;
             return; 
         }
+
+        // 🌟 SỬA LỖI MÀN HÌNH ĐEN BẰNG CÁCH CHẶN CHỤP ẢNH LỖI
+        if (!myGloveObj.complete || myGloveObj.naturalWidth === 0) return;
 
         ctx.save();
         let x, y, rot, size, scaleX = 1, scaleY = 1;
@@ -237,7 +254,6 @@ window.captureFrames = function() {
         ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.7, armWidth - 36, size * 0.05);
         ctx.restore();
 
-        // 🌟 Vẽ ảnh Găng tay lấy trực tiếp từ config nhân vật!
         ctx.drawImage(myGloveObj, 0, 0, size, size);
         ctx.restore();
     };
