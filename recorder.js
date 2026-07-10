@@ -1,6 +1,6 @@
 // ==========================================
-// RECORDER.JS - CINEMATIC EDITION (V4 - ANTI CRASH)
-// [NÂNG CẤP: CHỐNG TRÀN RAM (START 1000ms), SỬA LỖI ĐỨNG VIDEO GIỮA TRẬN]
+// RECORDER.JS - PERFECT CINEMATIC EDITION (V5)
+// [SỬA LỖI: TỌA ĐỘ TAY ĐỘNG LỰC HỌC, ÉP XUẤT MP4 CHỐNG LỖI 1 GIÂY]
 // ==========================================
 
 window.mediaRecorderH = null; window.recordedChunksH = []; window.recordCanvasH = null; window.recordCtxH = null;
@@ -8,26 +8,24 @@ window.mediaRecorderV = null; window.recordedChunksV = []; window.recordCanvasV 
 
 window.isRecording = false; 
 window.recordAudioDestination = null; 
-window.currentVideoExt = "webm"; 
+window.currentVideoExt = "mp4"; // Ép ưu tiên MP4
 window.savedVideos = [];
 window.bgmSourceNode = null;
 
-// TẢI TRƯỚC ẢNH NỨT MÀN HÌNH ĐỂ GHI HÌNH KHÔNG BỊ GIẬT
-window.fpsAssets = {
-    crack: new Image()
-};
+window.fpsAssets = { crack: new Image() };
 window.fpsAssets.crack.crossOrigin = "Anonymous";
 window.fpsAssets.crack.src = 'https://cdn-icons-png.flaticon.com/512/3295/3295055.png';
 
 window.initRecorder = function() {
+    // 🌟 SỬA LỖI TRÌNH DUYỆT NGỦ ĐÔNG: Kích thước thật, giấu ngoài màn hình để bắt trình duyệt phải Render
     if (!document.getElementById("hiddenRecordCanvasH")) {
         window.recordCanvasH = document.createElement("canvas"); window.recordCanvasH.id = "hiddenRecordCanvasH"; window.recordCanvasH.width = 1920; window.recordCanvasH.height = 1080;
-        window.recordCanvasH.style.cssText = "position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -9999;";
+        window.recordCanvasH.style.cssText = "position: absolute; top: -3000px; left: -3000px; width: 1920px; height: 1080px; opacity: 0.01; pointer-events: none; z-index: -9999;";
         document.body.appendChild(window.recordCanvasH); window.recordCtxH = window.recordCanvasH.getContext("2d");
     }
     if (!document.getElementById("hiddenRecordCanvasV")) {
         window.recordCanvasV = document.createElement("canvas"); window.recordCanvasV.id = "hiddenRecordCanvasV"; window.recordCanvasV.width = 1080; window.recordCanvasV.height = 1920;
-        window.recordCanvasV.style.cssText = "position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -9999;";
+        window.recordCanvasV.style.cssText = "position: absolute; top: -3000px; left: -3000px; width: 1080px; height: 1920px; opacity: 0.01; pointer-events: none; z-index: -9999;";
         document.body.appendChild(window.recordCanvasV); window.recordCtxV = window.recordCanvasV.getContext("2d");
     }
 
@@ -43,35 +41,24 @@ window.startRecording = function() {
     
     try { window.recordAudioDestination = window.audioCtx.createMediaStreamDestination(); } catch (e) { }
     
-    // GẮN BGM VÀO VIDEO
     if (window.bgmBase && window.recordAudioDestination) {
         try {
             if (!window.bgmSourceNode) window.bgmSourceNode = window.audioCtx.createMediaElementSource(window.bgmBase);
-            window.bgmSourceNode.connect(window.recordAudioDestination);
-            window.bgmSourceNode.connect(window.audioCtx.destination);
+            window.bgmSourceNode.connect(window.recordAudioDestination); window.bgmSourceNode.connect(window.audioCtx.destination);
         } catch (e) { console.log("Lỗi kết nối BGM:", e); }
     }
 
-    // CHỐNG LỆCH TIẾNG BẰNG TẦN SỐ 0
     try {
         if (window.silenceOsc) window.silenceOsc.stop();
-        window.silenceOsc = window.audioCtx.createOscillator();
-        let silenceGain = window.audioCtx.createGain(); silenceGain.gain.value = 0; 
-        window.silenceOsc.connect(silenceGain); silenceGain.connect(window.recordAudioDestination);
-        window.silenceOsc.start();
+        window.silenceOsc = window.audioCtx.createOscillator(); let silenceGain = window.audioCtx.createGain(); silenceGain.gain.value = 0; 
+        window.silenceOsc.connect(silenceGain); silenceGain.connect(window.recordAudioDestination); window.silenceOsc.start();
     } catch(e) {}
     
-    window.recordedChunksH = []; window.recordedChunksV = [];
-    window.isRecording = true; 
+    window.recordedChunksH = []; window.recordedChunksV = []; window.isRecording = true; 
     
-    // 🌟 SỬA LỖI CRASH VÒNG LẶP: Bọc Try/Catch để tránh lỗi tải ảnh làm chết máy quay
     const recordLoop = () => {
         if (!window.isRecording) return;
-        try {
-            window.captureFrames(); 
-        } catch (err) {
-            console.warn("Bỏ qua lỗi khung hình Camera:", err);
-        }
+        try { window.captureFrames(); } catch (err) {}
         requestAnimationFrame(recordLoop);
     };
     recordLoop();
@@ -81,31 +68,24 @@ window.startRecording = function() {
     let audioTracks = (window.recordAudioDestination && window.recordAudioDestination.stream) ? window.recordAudioDestination.stream.getAudioTracks() : [];
     
     let combinedStreamH = new MediaStream(); let combinedStreamV = new MediaStream();
-    
     videoStreamH.getVideoTracks().forEach(track => combinedStreamH.addTrack(track));
     videoStreamV.getVideoTracks().forEach(track => combinedStreamV.addTrack(track));
     audioTracks.forEach(track => { combinedStreamH.addTrack(track); combinedStreamV.addTrack(track); });
     
-    let options = { videoBitsPerSecond: 8000000 }; window.currentVideoExt = "webm";
-    if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) { options = { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "mp4"; } 
+    // 🌟 SỬA LỖI 1 GIÂY BẰNG CÁCH ƯU TIÊN ÉP MP4 TỐI ĐA
+    let options = { videoBitsPerSecond: 8000000 }; window.currentVideoExt = "mp4";
+    if (MediaRecorder.isTypeSupported('video/mp4')) { options = { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "mp4"; } 
+    else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) { options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "webm"; }
     else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "webm"; }
     
-    try { 
-        window.mediaRecorderH = new MediaRecorder(combinedStreamH, options); 
-        window.mediaRecorderV = new MediaRecorder(combinedStreamV, options); 
-    } catch (e) { 
-        window.mediaRecorderH = new MediaRecorder(combinedStreamH); 
-        window.mediaRecorderV = new MediaRecorder(combinedStreamV); 
-    }
+    try { window.mediaRecorderH = new MediaRecorder(combinedStreamH, options); window.mediaRecorderV = new MediaRecorder(combinedStreamV, options); } 
+    catch (e) { window.mediaRecorderH = new MediaRecorder(combinedStreamH); window.mediaRecorderV = new MediaRecorder(combinedStreamV); }
 
     window.mediaRecorderH.ondataavailable = (e) => { if (e.data && e.data.size > 0) window.recordedChunksH.push(e.data); };
     window.mediaRecorderV.ondataavailable = (e) => { if (e.data && e.data.size > 0) window.recordedChunksV.push(e.data); };
 
     let charName = "ĐỐI THỦ"; let charAvatar = "https://i.imgur.com/q3813rX.png";
-    if (window.enemies && window.enemies[0]) {
-        charName = window.enemies[0].className || "Đối thủ";
-        if(window.classStats && window.classStats[window.enemies[0].classId]) { charAvatar = window.classStats[window.enemies[0].classId].avatarUrl || charAvatar; }
-    }
+    if (window.enemies && window.enemies[0]) { charName = window.enemies[0].className || "Đối thủ"; if(window.classStats && window.classStats[window.enemies[0].classId]) { charAvatar = window.classStats[window.enemies[0].classId].avatarUrl || charAvatar; } }
 
     let stoppedCount = 0;
     const finalizeRecordings = () => {
@@ -119,8 +99,7 @@ window.startRecording = function() {
 
                 window.savedVideos.push({ 
                     id: Date.now(), urlH: videoUrlH, urlV: videoUrlV, ext: window.currentVideoExt, 
-                    timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                    heroName: charName, heroAvatar: charAvatar
+                    timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), heroName: charName, heroAvatar: charAvatar
                 });
                 window.updateVideoListUI();
             }, 200);
@@ -129,23 +108,17 @@ window.startRecording = function() {
 
     window.mediaRecorderH.onstop = finalizeRecordings; window.mediaRecorderV.onstop = finalizeRecordings;
     
-    // 🌟 SỬA TRÀN RAM: Gọi start(1000) thay vì start() để lưu bộ nhớ từng khối 1 giây
-    window.mediaRecorderH.start(1000); 
-    window.mediaRecorderV.start(1000); 
+    // Ghi file theo khối lớn duy nhất chống lỗi chèn Frame
+    window.mediaRecorderH.start(); window.mediaRecorderV.start(); 
 };
 
 window.stopRecording = function() { 
     if (!window.isRecording) return; 
     window.isRecording = false; 
-    
     try { 
-        if(window.mediaRecorderH.state === "recording") window.mediaRecorderH.requestData(); 
-        if(window.mediaRecorderV.state === "recording") window.mediaRecorderV.requestData(); 
-        
         if(window.mediaRecorderH.state !== "inactive") window.mediaRecorderH.stop(); 
         if(window.mediaRecorderV.state !== "inactive") window.mediaRecorderV.stop(); 
-    } catch(e){ console.error("Lỗi khi dừng video:", e); } 
-    
+    } catch(e){} 
     if (window.silenceOsc) { window.silenceOsc.stop(); window.silenceOsc = null; }
     if (window.bgmSourceNode) { window.bgmSourceNode.disconnect(); window.bgmSourceNode = null; }
 };
@@ -155,119 +128,109 @@ window.stopRecording = function() {
 // ==========================================
 window.captureFrames = function() {
     if (!window.isRecording || !window.recordCtxH || !window.recordCtxV || !window.canvas) return;
-    
     let ctxH = window.recordCtxH; let ctxV = window.recordCtxV;
     
-    // === 1. COPY KHUNG CẢNH GAME CHÍNH ===
     ctxH.fillStyle = "#050505"; ctxH.fillRect(0, 0, 1920, 1080); ctxH.imageSmoothingEnabled = false; 
     ctxH.drawImage(window.canvas, 0, 0, window.canvas.width, window.canvas.height, 0, 60, 1920, 960);
-    
     ctxV.fillStyle = "#111"; ctxV.fillRect(0, 0, 1080, 1920); ctxV.imageSmoothingEnabled = false;
     ctxV.drawImage(window.canvas, 0, 0, window.canvas.width, window.canvas.height, -420, 420, 1920, 1080);
 
-    // === 2. VẼ HIỆU ỨNG NỨT MÀN HÌNH ===
-    let crackEl = document.getElementById("screen-crack");
-    let crackOp = crackEl ? parseFloat(crackEl.style.opacity || 0) : 0;
+    let crackEl = document.getElementById("screen-crack"); let crackOp = crackEl ? parseFloat(crackEl.style.opacity || 0) : 0;
     if (crackOp > 0 && window.fpsAssets.crack.complete) {
         ctxH.globalAlpha = crackOp; ctxH.drawImage(window.fpsAssets.crack, 0, 60, 1920, 960);
         ctxV.globalAlpha = crackOp; ctxV.drawImage(window.fpsAssets.crack, 0, 420, 1080, 1080);
         ctxH.globalAlpha = 1.0; ctxV.globalAlpha = 1.0;
     }
 
-    // === 3. VẼ GĂNG TAY ĐẤM BỐC 3D (Có cánh tay và Băng quấn) ===
-    let leftGlove = document.getElementById("left-glove");
-    let rightGlove = document.getElementById("right-glove");
-    
-    let isPunchL = leftGlove && leftGlove.classList.contains("glove-punch-left");
-    let isBlockL = leftGlove && leftGlove.classList.contains("glove-block-left");
-    let isPunchR = rightGlove && rightGlove.classList.contains("glove-punch-right");
-    let isBlockR = rightGlove && rightGlove.classList.contains("glove-block-right");
+    let leftGlove = document.getElementById("left-glove"); let rightGlove = document.getElementById("right-glove");
+    let isPunchL = leftGlove && leftGlove.classList.contains("glove-punch-left"); let isBlockL = leftGlove && leftGlove.classList.contains("glove-block-left");
+    let isPunchR = rightGlove && rightGlove.classList.contains("glove-punch-right"); let isBlockR = rightGlove && rightGlove.classList.contains("glove-block-right");
 
     const drawGloveImage = (ctx, isH, isLeft, state) => {
         let myChar = window.classStats ? window.classStats[window.selectedRedClass] : null;
         let url = (myChar && myChar.gloveUrl) ? myChar.gloveUrl : 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png'; 
 
-        if (!window.hudImages) window.hudImages = {};
-        let myGloveObj = window.hudImages[url];
-        if (!myGloveObj) {
-            myGloveObj = new Image(); myGloveObj.crossOrigin = "Anonymous"; myGloveObj.src = url;
-            window.hudImages[url] = myGloveObj;
-            return; 
-        }
-
-        // 🌟 SỬA LỖI MÀN HÌNH ĐEN BẰNG CÁCH CHẶN CHỤP ẢNH LỖI
+        if (!window.hudImages) window.hudImages = {}; let myGloveObj = window.hudImages[url];
+        if (!myGloveObj) { myGloveObj = new Image(); myGloveObj.crossOrigin = "Anonymous"; myGloveObj.src = url; window.hudImages[url] = myGloveObj; return; }
         if (!myGloveObj.complete || myGloveObj.naturalWidth === 0) return;
 
         ctx.save();
-        let x, y, rot, size, scaleX = 1, scaleY = 1;
-        
-        if (isH) {
-            size = 650; 
+        let gx, gy, rot, size, scaleX = 1;
+        let anchorX, anchorY; // Điểm neo cánh tay từ dưới màn hình lên
+
+        // 🌟 TÍNH TÓAN TỌA ĐỘ VÀ ĐIỂM NEO CÁNH TAY TỰ ĐỘNG KHỚP VỚI GÓC CAM
+        if (isH) { // BẢN NGANG 1920x1080
+            size = 500;
             if (isLeft) {
-                if (state === 'punch') { x = 650; y = 300; size = 400; rot = 0; } 
-                else if (state === 'block') { x = 550; y = 500; rot = 35; ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; } 
-                else { x = -50; y = 700; rot = 15; } 
+                anchorX = -100; anchorY = 1200; // Neo góc trái dưới cùng
+                if (state === 'punch') { gx = 800; gy = 550; size = 450; rot = 15; } 
+                else if (state === 'block') { gx = 650; gy = 700; size = 500; rot = 40; } 
+                else { gx = 350; gy = 950; size = 550; rot = 25; } 
             } else {
-                scaleX = -1; 
-                if (state === 'punch') { x = 1270; y = 300; size = 400; rot = 0; }
-                else if (state === 'block') { x = 1370; y = 500; rot = -35; ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; }
-                else { x = 1970; y = 700; rot = -15; }
+                anchorX = 2020; anchorY = 1200; scaleX = -1; // Neo góc phải dưới cùng
+                if (state === 'punch') { gx = 1120; gy = 550; size = 450; rot = -15; }
+                else if (state === 'block') { gx = 1270; gy = 700; size = 500; rot = -40; }
+                else { gx = 1570; gy = 950; size = 550; rot = -25; }
             }
-        } else {
-            size = 450; 
+        } else { // BẢN DỌC TIKTOK 1080x1920
+            size = 400;
             if (isLeft) {
-                if (state === 'punch') { x = 350; y = 900; size = 300; rot = 0; }
-                else if (state === 'block') { x = 200; y = 1100; rot = 35; ctx.shadowBlur = 30; ctx.shadowColor = "#00f3ff"; }
-                else { x = -100; y = 1300; rot = 15; }
+                anchorX = -50; anchorY = 2000; 
+                if (state === 'punch') { gx = 450; gy = 1050; size = 350; rot = 15; }
+                else if (state === 'block') { gx = 350; gy = 1250; size = 400; rot = 40; }
+                else { gx = 200; gy = 1550; size = 450; rot = 25; }
             } else {
-                scaleX = -1;
-                if (state === 'punch') { x = 730; y = 900; size = 300; rot = 0; }
-                else if (state === 'block') { x = 880; y = 1100; rot = -35; ctx.shadowBlur = 30; ctx.shadowColor = "#00f3ff"; }
-                else { x = 1180; y = 1300; rot = -15; }
+                anchorX = 1130; anchorY = 2000; scaleX = -1;
+                if (state === 'punch') { gx = 630; gy = 1050; size = 350; rot = -15; }
+                else if (state === 'block') { gx = 730; gy = 1250; size = 400; rot = -40; }
+                else { gx = 880; gy = 1550; size = 450; rot = -25; }
             }
         }
 
-        ctx.translate(x, y);
-        ctx.scale(scaleX, scaleY);
-        ctx.rotate(rot * Math.PI / 180);
+        // --- 🌟 VẼ CẲNG TAY VẬT LÝ BÁM CHẶT TỪ MÉP MÀN HÌNH ĐẾN GĂNG ---
+        let dx = gx - anchorX; 
+        let dy = gy - anchorY;
+        let angle = Math.atan2(dy, dx);
         
-        if (state !== 'block') { ctx.shadowBlur = 25; ctx.shadowColor = "rgba(0,0,0,0.8)"; } 
-        
-        // --- VẼ CẲNG TAY DA NGƯỜI VÀO VIDEO ---
-        ctx.save();
-        let armWidth = size * 0.4;
-        let armLength = size * 0.8;
-        let armGrad = ctx.createLinearGradient(size/2 - armWidth/2, 0, size/2 + armWidth/2, 0);
+        let perpX = Math.cos(angle + Math.PI/2);
+        let perpY = Math.sin(angle + Math.PI/2);
+        let wGlove = size * 0.45; // Bản rộng cổ tay
+        let wBase = size * 0.9;   // Bản rộng bắp tay ở sát mép
+
+        let armGrad = ctx.createLinearGradient(anchorX, anchorY, gx, gy);
         armGrad.addColorStop(0, "#8b5a2b"); armGrad.addColorStop(0.5, "#f1c27d"); armGrad.addColorStop(1, "#b87333");
-        
+
         ctx.fillStyle = armGrad;
         ctx.beginPath();
-        ctx.moveTo(size/2 - armWidth/2 + 20, size * 0.6); 
-        ctx.lineTo(size/2 + armWidth/2 - 20, size * 0.6); 
-        ctx.lineTo(size/2 + armWidth/2 + 10, size * 0.6 + armLength); 
-        ctx.lineTo(size/2 - armWidth/2 - 10, size * 0.6 + armLength); 
+        ctx.moveTo(anchorX + perpX * wBase/2, anchorY + perpY * wBase/2);
+        ctx.lineTo(gx + perpX * wGlove/2, gy + perpY * wGlove/2);
+        ctx.lineTo(gx - perpX * wGlove/2, gy - perpY * wGlove/2);
+        ctx.lineTo(anchorX - perpX * wBase/2, anchorY - perpY * wBase/2);
         ctx.fill();
 
+        // Băng quấn quanh cổ tay
+        ctx.save();
+        ctx.translate(gx - Math.cos(angle)*(size*0.1), gy - Math.sin(angle)*(size*0.1));
+        ctx.rotate(angle);
         ctx.fillStyle = "#bdc3c7";
-        ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.6, armWidth - 36, size * 0.15);
-        ctx.fillStyle = "rgba(0,0,0,0.4)";
-        ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.7, armWidth - 36, size * 0.05);
+        ctx.fillRect(-size*0.15, -wGlove/2, size*0.2, wGlove);
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillRect(-size*0.15, -wGlove/2, size*0.05, wGlove);
         ctx.restore();
 
-        ctx.drawImage(myGloveObj, 0, 0, size, size);
+        // VẼ ẢNH GĂNG TAY
+        ctx.translate(gx, gy); ctx.rotate(rot * Math.PI / 180); ctx.scale(scaleX, 1);
+        if (state === 'block') { ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; } else { ctx.shadowBlur = 25; ctx.shadowColor = "rgba(0,0,0,0.8)"; }
+        ctx.drawImage(myGloveObj, -size/2, -size/2, size, size);
         ctx.restore();
     };
 
-    drawGloveImage(ctxH, true, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle'));
-    drawGloveImage(ctxH, true, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
-    drawGloveImage(ctxV, false, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle'));
-    drawGloveImage(ctxV, false, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
+    drawGloveImage(ctxH, true, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle')); drawGloveImage(ctxH, true, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
+    drawGloveImage(ctxV, false, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle')); drawGloveImage(ctxV, false, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
 
     // === 4. VẼ VIỀN ĐIỆN ẢNH VÀ HUD ===
-    let vignetteH = ctxH.createRadialGradient(960, 540, 500, 960, 540, 1200); vignetteH.addColorStop(0, 'rgba(0,0,0,0)'); vignetteH.addColorStop(1, 'rgba(0,0,0,0.7)'); 
-    ctxH.fillStyle = vignetteH; ctxH.fillRect(0, 60, 1920, 960);
-    let vignetteV = ctxV.createRadialGradient(540, 960, 400, 540, 960, 1000); vignetteV.addColorStop(0, 'rgba(0,0,0,0)'); vignetteV.addColorStop(1, 'rgba(0,0,0,0.8)');
-    ctxV.fillStyle = vignetteV; ctxV.fillRect(0, 420, 1080, 1080);
+    let vignetteH = ctxH.createRadialGradient(960, 540, 500, 960, 540, 1200); vignetteH.addColorStop(0, 'rgba(0,0,0,0)'); vignetteH.addColorStop(1, 'rgba(0,0,0,0.7)'); ctxH.fillStyle = vignetteH; ctxH.fillRect(0, 60, 1920, 960);
+    let vignetteV = ctxV.createRadialGradient(540, 960, 400, 540, 960, 1000); vignetteV.addColorStop(0, 'rgba(0,0,0,0)'); vignetteV.addColorStop(1, 'rgba(0,0,0,0.8)'); ctxV.fillStyle = vignetteV; ctxV.fillRect(0, 420, 1080, 1080);
 
     const getHudImg = (url) => { if (!url) return null; if (window.hudImages[url] && window.hudImages[url].complete && window.hudImages[url].naturalWidth > 0) return window.hudImages[url]; if (!window.hudImages[url]) { let img = new Image(); img.crossOrigin = "Anonymous"; img.src = url; window.hudImages[url] = img; } return null; };
 
@@ -319,7 +282,7 @@ window.updateVideoListUI = function() {
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <a href="${vid.urlH}" download="FPS_vs_${vid.heroName}_Ngang_1080p.${vid.ext}" style="background: #ff003c; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 4px; font-family: 'Teko', sans-serif; font-size: 18px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 2px 5px rgba(255,0,60,0.3); transition: 0.2s;">📥 NGANG</a>
+                        <a href="${vid.urlH}" download="FPS_vs_${vid.heroName}_Ngang.${vid.ext}" style="background: #ff003c; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 4px; font-family: 'Teko', sans-serif; font-size: 18px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 2px 5px rgba(255,0,60,0.3); transition: 0.2s;">📥 NGANG</a>
                         <a href="${vid.urlV}" download="FPS_vs_${vid.heroName}_TikTok.${vid.ext}" style="background: #00f3ff; color: #0a0d14; text-decoration: none; padding: 8px 15px; border-radius: 4px; font-family: 'Teko', sans-serif; font-size: 18px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 2px 5px rgba(0,243,255,0.3); transition: 0.2s;">📱 DỌC (Tiktok)</a>
                         <button onclick="window.deleteVideo(${vid.id})" style="background: transparent; color: #94a3b8; border: 1px solid #475569; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;">❌</button>
                     </div>
