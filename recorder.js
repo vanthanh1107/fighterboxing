@@ -1,6 +1,6 @@
 // ==========================================
-// RECORDER.JS - CINEMATIC EDITION (ĐÃ FIX LỖI BLANK VIDEO)
-// [NÂNG CẤP: VÒNG LẶP QUAY PHIM ĐỘC LẬP 60FPS KHÔNG BỊ ĐEN MÀN HÌNH]
+// RECORDER.JS - CINEMATIC EDITION (V3)
+// [NÂNG CẤP: ĐỌC ẢNH GĂNG TAY TRỰC TIẾP TỪ FILE CHARACTER.JS CỦA NHÂN VẬT]
 // ==========================================
 
 window.mediaRecorderH = null; window.recordedChunksH = []; window.recordCanvasH = null; window.recordCtxH = null;
@@ -62,15 +62,14 @@ window.startRecording = function() {
     } catch(e) {}
     
     window.recordedChunksH = []; window.recordedChunksV = [];
-    window.isRecording = true; // Bật cờ ghi hình
+    window.isRecording = true; 
     
-    // 🌟 SỬA LỖI Ở ĐÂY: Tạo vòng lặp máy quay liên tục copy hình ảnh game vào Video
     const recordLoop = () => {
         if (!window.isRecording) return;
-        window.captureFrames(); // Chụp ảnh liên tục 60 khung hình/giây
+        window.captureFrames(); 
         requestAnimationFrame(recordLoop);
     };
-    recordLoop(); // Bấm máy quay!
+    recordLoop();
 
     let videoStreamH = window.recordCanvasH.captureStream(60); 
     let videoStreamV = window.recordCanvasV.captureStream(60); 
@@ -131,7 +130,7 @@ window.stopRecording = function() {
     if (!window.isRecording) return; 
     try { window.mediaRecorderH.requestData(); window.mediaRecorderV.requestData(); } catch(e){} 
     window.mediaRecorderH.stop(); window.mediaRecorderV.stop(); 
-    window.isRecording = false;  // Tắt cờ ghi hình -> Ngừng vòng lặp chụp ảnh
+    window.isRecording = false;  
     if (window.silenceOsc) { window.silenceOsc.stop(); window.silenceOsc = null; }
     if (window.bgmSourceNode) { window.bgmSourceNode.disconnect(); window.bgmSourceNode = null; }
 };
@@ -170,11 +169,9 @@ window.captureFrames = function() {
     let isBlockR = rightGlove && rightGlove.classList.contains("glove-block-right");
 
     const drawGloveImage = (ctx, isH, isLeft, state) => {
-        let gloveEl = isLeft ? document.getElementById("left-glove") : document.getElementById("right-glove");
-        if (!gloveEl) return;
-        
-        let bgImgStyle = window.getComputedStyle(gloveEl).backgroundImage;
-        let url = bgImgStyle !== 'none' ? bgImgStyle.slice(5, -2).replace(/"/g, "") : 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
+        // 🌟 LẤY THẲNG ẢNH GĂNG TAY TỪ THUỘC TÍNH "gloveUrl" TRONG CHARACTER.JS
+        let myChar = window.classStats ? window.classStats[window.selectedRedClass] : null;
+        let url = (myChar && myChar.gloveUrl) ? myChar.gloveUrl : 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png'; // Găng đỏ mặc định
 
         if (!window.hudImages) window.hudImages = {};
         let myGloveObj = window.hudImages[url];
@@ -219,7 +216,7 @@ window.captureFrames = function() {
         
         if (state !== 'block') { ctx.shadowBlur = 25; ctx.shadowColor = "rgba(0,0,0,0.8)"; } 
         
-        // --- BẮT ĐẦU VẼ CẲNG TAY DA NGƯỜI VÀO VIDEO ---
+        // --- VẼ CẲNG TAY DA NGƯỜI VÀO VIDEO ---
         ctx.save();
         let armWidth = size * 0.4;
         let armLength = size * 0.8;
@@ -240,6 +237,7 @@ window.captureFrames = function() {
         ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.7, armWidth - 36, size * 0.05);
         ctx.restore();
 
+        // 🌟 Vẽ ảnh Găng tay lấy trực tiếp từ config nhân vật!
         ctx.drawImage(myGloveObj, 0, 0, size, size);
         ctx.restore();
     };
