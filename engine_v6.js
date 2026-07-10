@@ -1,6 +1,6 @@
 // ==========================================
-// ENGINE.JS - FATALITY EDITION (V25.0)
-// [ĐỈNH CAO: 4 KIỂU KẾT LIỄU ĐA DẠNG, VẬT LÝ RƠI NẢY MẶT SÀN, CAMERA NGÃ GỤC]
+// ENGINE.JS - FATALITY CINEMATIC EDITION (V26.0)
+// [ĐỈNH CAO: CHỚP ÂM BẢN X-RAY, VIỀN PHIM RẠP, 6 KIỂU NGÃ GỤC]
 // ==========================================
 
 window.canvas = null; window.ctx = null; window.audioCtx = null; window.isMuted = false;
@@ -11,6 +11,7 @@ window.globalWind = 0;
 
 window.camX = 0; window.camY = 0; window.cameraTilt = 0; window.camZoom = 1; window.targetZ = 120; 
 window.damageFlashAlpha = 0; window.perfectDodgeFlash = 0; window.hitZoomTimer = 0; window.clutchFlashTimer = 0;
+window.fatalBlowFlash = 0; // Biến chớp sáng X-Ray
 
 window.playSound = function(freq, type, duration, vol, isImpact = false) { 
     if (window.isMuted) return; 
@@ -28,12 +29,12 @@ window.playSound = function(freq, type, duration, vol, isImpact = false) {
 window.shakeScreen = function(frames, magnitude) { window.shakeTime = frames; window.shakeMag = magnitude; }
 window.spawnParticles = function(x, y, color, isCrit = false) { let count = isCrit ? 25 : 12; for(let i=0; i<count; i++) { let angle = Math.random() * Math.PI * 2; let speed = Math.random() * (isCrit?15:6) + 2; window.particles.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 30, maxLife: 30, color: color, size: Math.random() * 5 + 2 }); } }
 
-// 🌟 HÀM XỬ LÝ KẾT LIỄU ĐỘC QUYỀN (FATALITY MANAGER)
+// 🌟 HÀM KẾT LIỄU NÂNG CẤP (6 KIỂU)
 window.triggerFatality = function(target) {
-    target.hp = 0; target.state = 'ko_falling'; target.koTimer = 150;
+    target.hp = 0; target.state = 'ko_falling'; target.koTimer = 200;
     
-    // Random 4 kiểu kết liễu
-    let finishers = ['uppercut', 'knockback', 'crumple', 'spin'];
+    // 6 Kiểu Kết Liễu!
+    let finishers = ['uppercut', 'knockback', 'crumple', 'spin', 'faceplant', 'backflip'];
     target.koType = finishers[Math.floor(Math.random() * finishers.length)];
     target.rotation = 0;
     
@@ -42,17 +43,20 @@ window.triggerFatality = function(target) {
     else if (target.koType === 'knockback') { target.vy = -8; window.targetZ += 180; koText = "☄️ BLASTED!"; }
     else if (target.koType === 'crumple') { target.vy = 0; koText = "🥀 CRUMPLED!"; }
     else if (target.koType === 'spin') { target.vy = -14; window.targetZ += 50; koText = "🌪️ SPUN OUT!"; }
+    else if (target.koType === 'faceplant') { target.vy = -4; window.targetZ -= 10; koText = "💀 FACEPLANT!"; }
+    else if (target.koType === 'backflip') { target.vy = -16; window.targetZ += 60; koText = "🤸 BACKFLIPPED!"; }
 
     window.matchResolved = true; window.gameOver = true; window.koGlitchTimer = 80;
-    window.hitZoomTimer = 80; // Zoom sát cảnh kết liễu cực lâu
-    window.shakeScreen(40, 30);
-    window.playSound(80, 'sawtooth', 1.5, 0.9, true);
+    window.hitZoomTimer = 120; // Zoom sát cảnh kết liễu cực lâu
+    window.fatalBlowFlash = 10; // Kích hoạt chớp Âm bản (X-Ray)
+
+    window.shakeScreen(50, 35);
+    window.playSound(60, 'sawtooth', 2.0, 1.0, true);
 
     window.floatingTexts.push({ x: 400, y: 150, text: koText, color: "#f1c40f", alpha: 1, vx: 0, vy: -1.5, font: "italic 900 65px Impact", life: 180 });
 
-    // Hiệu ứng Ma trận Ngưng đọng thời gian (Cinematic Hit-Stop siêu dài)
     window.isLoopRunning = false;
-    setTimeout(() => { if(!window.gameOver || window.matchResolved) { window.isLoopRunning = true; requestAnimationFrame(window.gameLoopFPS); } }, 600);
+    setTimeout(() => { if(!window.gameOver || window.matchResolved) { window.isLoopRunning = true; requestAnimationFrame(window.gameLoopFPS); } }, 700);
 };
 
 window.moveFPS = function(dir) {
@@ -101,10 +105,9 @@ window.punch = function(hand) {
         if (window.playerFPS.clutchActive) dmg = Math.floor(dmg * 1.4);
         e.hp -= dmg;
         
-        // KIỂM TRA MÁU ĐỂ KÍCH HOẠT KẾT LIỄU MỚI
         if (e.hp <= 0) {
             window.triggerFatality(e);
-            window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, "rgba(220, 0, 0, 0.9)", true); // Phun máu đỏ tươi
+            window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, "rgba(220, 0, 0, 0.9)", true); 
         } else {
             if (isCrit || isRagePunch || isPerfectCounter) { e.state = 'hurt'; e.hitStun = isRagePunch ? 45 : 25; e.attackTimer = 0; e.guardBreakTimer = 0; } else { if (e.attackTimer <= 0) { e.state = 'hurt'; e.hitStun = 10; } }
             let hitStopDuration = isRagePunch ? 150 : (isCrit || isPerfectCounter ? 80 : 0);
@@ -122,14 +125,13 @@ window.punch = function(hand) {
 window.blockFPS = function() { if (window.playerFPS.stamina <= 0 || window.gameOver || window.playerFPS.guardBreakTimer > 0) return; window.playerFPS.isBlocking = true; document.getElementById("left-glove").classList.add("glove-block-left"); document.getElementById("right-glove").classList.add("glove-block-right"); const releaseBlock = () => { window.playerFPS.isBlocking = false; document.getElementById("left-glove").classList.remove("glove-block-left"); document.getElementById("right-glove").classList.remove("glove-block-right"); document.removeEventListener('mouseup', releaseBlock); document.removeEventListener('touchend', releaseBlock); }; document.addEventListener('mouseup', releaseBlock); document.addEventListener('touchend', releaseBlock); };
 window.dodgeFPS = function() { if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver || window.playerFPS.guardBreakTimer > 0) return; let e = window.enemies[0]; let isPerfect = (e && e.attackTimer > 5 && e.attackTimer < 20); window.playerFPS.isDodging = true; window.playerFPS.iFrames = isPerfect ? 50 : 30; window.playerFPS.stamina -= (isPerfect ? 0 : 20); window.playerFPS.dodgeDir = Math.random() > 0.5 ? 1 : -1; window.playerFPS.dodgeTimer = isPerfect ? 45 : 35; if (isPerfect) { window.perfectDodgeFlash = 1.0; window.playerFPS.perfectDodgeBuff = true; window.playSound(800, 'sine', 0.5, 0.6); window.floatingTexts.push({ x: 400, y: window.canvas.height/2 + 80, text: "⚡ PERFECT DODGE! ⚡", color: "#00f3ff", alpha: 1, vx: 0, vy: -2, font: "italic 900 38px Arial", life: 50 }); e.attackTimer = 0; e.state = 'idle'; e.hitStun = 30; window.camZoom = 1.15; setTimeout(() => { let counterHand = window.playerFPS.dodgeDir === 1 ? 'right' : 'left'; window.punch(counterHand); }, 250); } else { window.playSound(200, 'sine', 0.2, 0.4); if (Math.random() < 0.75) { setTimeout(() => { let counterHand = window.playerFPS.dodgeDir === 1 ? 'right' : 'left'; window.punch(counterHand); }, 180); } } setTimeout(() => { window.playerFPS.isDodging = false; }, isPerfect ? 600 : 400); };
 
-// ==========================================
-// 3. VÒNG LẶP UPDATE TỔNG (QUẢN LÝ RAGDOLL PHYSICS KHI NGÃ)
-// ==========================================
 window.update = function() {
     if (!window.canvas) { window.canvas = document.getElementById("battleCanvas"); if(window.canvas) window.ctx = window.canvas.getContext("2d"); } 
     if (!window.canvas || !window.ctx) return; 
 
     window.clutchFlashTimer++; if (window.damageFlashAlpha > 0) window.damageFlashAlpha -= 0.04; if (window.perfectDodgeFlash > 0) window.perfectDodgeFlash -= 0.05; if (window.hitZoomTimer > 0) window.hitZoomTimer--;
+    if (window.fatalBlowFlash > 0) window.fatalBlowFlash--; 
+    
     if (window.koGlitchTimer > 0) window.koGlitchTimer--; if (window.introTimer > 0) { window.introTimer--; if (window.introTimer === 60) { window.playSound(100, 'sine', 0.5, 0.5, true); window.shakeScreen(15, 10); } return; }
     window.globalWind = Math.sin(Date.now() / 2500) * 1.5; window.matchTimer++; if (window.shakeTime > 0) window.shakeTime--; 
     
@@ -146,16 +148,11 @@ window.update = function() {
     if (window.playerFPS.hp <= 300 && !window.playerFPS.clutchUsed && !window.gameOver) { window.playerFPS.clutchUsed = true; window.playerFPS.clutchActive = true; window.playerFPS.stamina = 100; window.playerFPS.rage = 100; window.floatingTexts.push({ x: 400, y: 130, text: "🔥 TRẠNG THÁI SINH TỬ: LẬT KÈO!!! 🔥", color: "#f1c40f", alpha: 1, vx: 0, vy: -1, font: "italic 900 35px Impact", life: 90 }); window.playSound(800, 'sawtooth', 0.5, 0.5); window.shakeScreen(30, 15); }
     if (e && e.hp <= e.maxHp * 0.3 && !e.clutchUsed && !window.gameOver) { e.clutchUsed = true; e.clutchActive = true; e.rage = 100; window.floatingTexts.push({ x: e.x, y: e.y - 170, text: "🚨 ĐỊCH ĐIÊN CUỒNG BẠO KÍCH! 🚨", color: "#ff003c", alpha: 1, vx: 0, vy: -1, font: "italic 900 35px Impact", life: 90 }); window.playSound(140, 'square', 0.5, 0.5); window.shakeScreen(30, 15); }
 
-    // --- HỆ THỐNG CAMERA ---
     let targetCamX = 0; let targetCamY = 0; let targetTilt = 0; let targetZoom = 1.0;
-    if (window.hitZoomTimer > 0) targetZoom = 1.15;
+    if (window.hitZoomTimer > 0) targetZoom = window.gameOver ? 1.25 : 1.15; // Phóng to cực đại khi K.O
     
-    // 🌟 CAMERA GỤC XUỐNG KHI BẠN BỊ K.O
     if (window.playerFPS.hp <= 0) {
-        targetCamY = 300; // Đổ gục xuống sàn
-        targetTilt = -Math.PI / 6; // Ngửa mặt nghiêng sang 1 bên
-        targetZoom = 1.2;
-        window.damageFlashAlpha = 0.6; // Mắt đẫm máu mờ dần
+        targetCamY = 300; targetTilt = -Math.PI / 6; targetZoom = 1.2; window.damageFlashAlpha = 0.6; 
     } else {
         targetCamY += Math.sin(window.matchTimer * 0.03) * 3; targetCamX += Math.cos(window.matchTimer * 0.02) * 2;
     }
@@ -174,7 +171,6 @@ window.update = function() {
     let wrapper = document.querySelector(".canvas-wrapper");
     if (wrapper) { wrapper.style.transform = `scale(${window.camZoom}) translate(${-window.camX}px, ${window.camY}px) rotate(${-window.cameraTilt}rad)`; }
 
-    // --- AI NGƯỜI CHƠI ---
     if (e && e.hp > 0 && !window.gameOver && window.introTimer <= 0) {
         if (!window.playerFPS.aiStateTimer) window.playerFPS.aiStateTimer = 0;
         if (window.playerFPS.aiStateTimer > 0) window.playerFPS.aiStateTimer--;
@@ -190,7 +186,6 @@ window.update = function() {
         }
     }
 
-    // --- AI ĐỐI THỦ ---
     if (e && e.hp > 0 && !window.gameOver) {
         if (!e.baseTargetX) e.baseTargetX = 400; if (!e.targetX) e.targetX = 400; if (!e.lean) e.lean = 0; if (!e.targetLean) e.targetLean = 0;
         if (e.hitStun > 0 || e.guardBreakTimer > 0) { if (e.hitStun > 0) e.hitStun--; if (e.hitStun <= 0 && e.guardBreakTimer <= 0) e.state = 'idle'; } 
@@ -208,36 +203,34 @@ window.update = function() {
         }
     }
 
-    // 🌟 VẬT LÝ NGÃ GỤC THEO LOẠI KẾT LIỄU
+    // 🌟 VẬT LÝ NGÃ RAGDOLL 6 KIỂU KHÁC NHAU
     if (e && e.hp <= 0) { 
         if(e.koTimer > 0) e.koTimer--; 
         
-        if (e.koType === 'spin' && e.state === 'ko_falling') e.rotation += 0.35; // Xoay vòng khét lẹt
+        if (e.koType === 'spin' && e.state === 'ko_falling') e.rotation += 0.35; 
+        if (e.koType === 'backflip' && e.state === 'ko_falling') { e.rotation -= 0.2; window.enemyZ += 2; }
         
         if (e.koType === 'crumple') {
-            if (e.state === 'ko_falling') {
-                e.y += 2.5; // Từ từ khuỵu xuống
-                if (e.y > window.GROUND_Y + 50) { e.state = 'dead'; }
-            }
+            if (e.state === 'ko_falling') { e.y += 2.5; if (e.y > window.GROUND_Y + 50) { e.state = 'dead'; } }
         } else {
-            // Rơi tự do
             e.vy += window.GRAVITY; e.y += e.vy; 
             
-            if (e.koType === 'knockback') window.enemyZ += 6; // Văng lùi tít ra xa
+            if (e.koType === 'knockback') window.enemyZ += 6; 
             if (e.koType === 'uppercut') window.enemyZ += 0.5;
             
-            // Xử lý đập đất (Bouncing)
+            // Xử lý nảy trên mặt đất
             if (e.y > window.GROUND_Y) { 
                 e.y = window.GROUND_Y; 
                 if (e.bounceCount === undefined) e.bounceCount = 0;
                 
                 if (e.koType === 'uppercut' && e.bounceCount < 1) {
-                    e.vy = -7; e.bounceCount++; window.playSound(250, 'square', 0.2, 0.4, true); // Nảy 1 phát
+                    e.vy = -7; e.bounceCount++; window.playSound(250, 'square', 0.2, 0.4, true); 
                 } else if (e.koType === 'spin' && e.bounceCount < 1) {
                     e.vy = -4; e.bounceCount++; window.playSound(250, 'square', 0.2, 0.4, true);
+                } else if (e.koType === 'backflip' && e.bounceCount < 1) {
+                    e.vy = -6; e.bounceCount++; window.playSound(200, 'square', 0.3, 0.5, true);
                 } else {
-                    e.vy = 0; 
-                    e.state = 'dead'; 
+                    e.vy = 0; e.state = 'dead'; 
                 }
             } 
         }
@@ -269,7 +262,78 @@ window.enemyAttackAction = function(e) {
         if (window.playerFPS.hp <= 0) { 
             window.playerFPS.hp = 0; window.gameOver = true; window.koGlitchTimer = 60; 
             window.floatingTexts.push({ x: 400, y: 200, text: "VÕ SĨ CỦA BẠN ĐÃ GỤC!", color: "#ff4757", alpha: 1, vx: 0, vy: -1, font: "900 40px Arial", life: 180 }); 
-            window.spawnParticles(window.canvas.width/2, window.canvas.height/2, "rgba(220, 0, 0, 0.9)", true); // Máu bắn tung tóe lên camera
+            window.spawnParticles(window.canvas.width/2, window.canvas.height/2, "rgba(220, 0, 0, 0.9)", true); 
         }
     }
+}
+
+// ==========================================
+// 4. VÒNG LẶP VẼ (DRAW ĐIỆN ẢNH BỘ LỌC)
+// ==========================================
+window.draw = function() {
+    if (!window.canvas || !window.ctx) return;
+    window.ctx.setTransform(1, 0, 0, 1, 0, 0); window.ctx.clearRect(0, 0, window.canvas.width, window.canvas.height); window.ctx.save();
+
+    // 🌟 KHI GAME OVER -> MÀU SẮC CHUYỂN U ÁM (CINEMATIC DEATH SCREEN)
+    if (window.gameOver && window.matchResolved) {
+        window.ctx.filter = "grayscale(80%) sepia(50%) hue-rotate(-30deg) contrast(120%)";
+    }
+    
+    if (window.shakeTime > 0) { window.ctx.translate((Math.random() - 0.5) * window.shakeMag, (Math.random() - 0.5) * window.shakeMag); }
+
+    // 🌟 X-RAY FLASH ÂM BẢN KHI RA ĐÒN KẾT LIỄU
+    if (window.fatalBlowFlash > 0) {
+        window.ctx.filter = "invert(100%) contrast(150%) hue-rotate(180deg)";
+    }
+
+    if (typeof window.drawBoxingRing === 'function') { window.drawBoxingRing(window.ctx, window.canvas.width, window.canvas.height); } 
+    else { window.ctx.fillStyle = "#05050a"; window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height); }
+
+    let e = window.enemies[0];
+    if (e) {
+        window.ctx.save();
+        let perspectiveScale = 300 / (200 + Math.max(0, window.enemyZ)); let renderY = window.GROUND_Y + (100 - window.enemyZ) * 0.5;
+        window.ctx.translate(e.x, renderY); window.ctx.scale(perspectiveScale, perspectiveScale);
+        if (e.lean) window.ctx.rotate(e.lean); 
+        let cloneE = Object.assign({}, e, {x: 0, y: 0});
+        if (typeof window.drawStickman === 'function') { window.drawStickman(window.ctx, cloneE); }
+        window.ctx.restore();
+    }
+
+    window.ctx.filter = "none"; // Xóa bộ lọc cho các thành phần HUD/Hạt bên trên
+
+    if(window.weatherParticles) {
+        window.ctx.lineWidth = 2;
+        window.weatherParticles.forEach(w => { 
+            if (window.currentWeather === 'snow') { window.ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; window.ctx.beginPath(); window.ctx.arc(w.x, w.y, w.size, 0, Math.PI*2); window.ctx.fill(); } 
+            else if (window.currentWeather === 'rain' || window.currentWeather === 'blood_rain') { window.ctx.strokeStyle = window.currentWeather === 'rain' ? "rgba(155, 155, 255, 0.6)" : "rgba(214, 48, 49, 0.75)"; window.ctx.beginPath(); window.ctx.moveTo(w.x, w.y); window.ctx.lineTo(w.x - 6, w.y + 15); window.ctx.stroke(); } 
+        });
+    }
+
+    window.particles.forEach(pt => { window.ctx.globalAlpha = Math.max(0, Math.min(1, pt.life / pt.maxLife)); window.ctx.fillStyle = pt.color; window.ctx.beginPath(); window.ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI*2); window.ctx.fill(); }); window.ctx.globalAlpha = 1.0;
+    window.floatingTexts.forEach(t => { window.ctx.font = t.font || "900 22px Arial"; window.ctx.fillStyle = t.color; window.ctx.shadowBlur = 5; window.ctx.shadowColor = t.color; window.ctx.globalAlpha = Math.max(0, t.alpha); window.ctx.textAlign = "center"; window.ctx.fillText(t.text, t.x, t.y); window.ctx.shadowBlur = 0; }); window.ctx.globalAlpha = 1.0;
+
+    if (window.perfectDodgeFlash > 0 && !window.gameOver) { let dodgeGrad = window.ctx.createRadialGradient(window.canvas.width/2, window.canvas.height/2, 100, window.canvas.width/2, window.canvas.height/2, 800); dodgeGrad.addColorStop(0, "rgba(0, 243, 255, 0)"); dodgeGrad.addColorStop(1, `rgba(0, 243, 255, ${window.perfectDodgeFlash * 0.5})`); window.ctx.fillStyle = dodgeGrad; window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height); }
+    if (window.playerFPS.clutchActive && Math.floor(window.clutchFlashTimer / 8) % 2 === 0 && !window.gameOver) { let grad = window.ctx.createRadialGradient(window.canvas.width/2, window.canvas.height/2, 200, window.canvas.width/2, window.canvas.height/2, 500); grad.addColorStop(0, "rgba(241, 196, 15, 0)"); grad.addColorStop(1, "rgba(241, 196, 15, 0.25)"); window.ctx.fillStyle = grad; window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height); }
+    if (window.damageFlashAlpha > 0 && !window.gameOver) { window.ctx.fillStyle = `rgba(255, 0, 0, ${window.damageFlashAlpha})`; window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height); }
+    
+    // 🌟 2 DẢI VIỀN ĐEN PHIM RẠP KHI K.O (Cinematic Letterbox)
+    if (window.gameOver && window.matchResolved) {
+        window.ctx.fillStyle = "#000";
+        window.ctx.fillRect(0, 0, window.canvas.width, 80); // Viền trên
+        window.ctx.fillRect(0, window.canvas.height - 80, window.canvas.width, 80); // Viền dưới
+    }
+
+    if (window.introTimer > 0 && !window.gameOver) {
+        window.ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; window.ctx.fillRect(0, 0, window.canvas.width, window.canvas.height); window.ctx.textAlign = "center";
+        if (window.introTimer > 60) { window.ctx.font = "italic 900 60px Arial"; window.ctx.fillStyle = "#f1c40f"; window.ctx.fillText("CHUẨN BỊ...", window.canvas.width/2, window.canvas.height/2); } 
+        else { let scale = 1 + (window.introTimer / 60) * 0.5; window.ctx.save(); window.ctx.translate(window.canvas.width/2, window.canvas.height/2); window.ctx.scale(scale, scale); window.ctx.font = "italic 900 80px Arial"; window.ctx.fillStyle = "#ff4757"; window.ctx.fillText("🥊 FIGHT! 🥊", 0, 20); window.ctx.restore(); }
+    }
+    window.ctx.restore();
+}
+
+window.gameLoopFPS = function(timestamp) { 
+    if (!window.isLoopRunning) return; requestAnimationFrame(window.gameLoopFPS); 
+    if (!timestamp) timestamp = 0; let deltaTime = timestamp - window.lastFrameTime; 
+    if (deltaTime >= window.FRAME_MIN_TIME) { window.lastFrameTime = timestamp - (deltaTime % window.FRAME_MIN_TIME); try { window.update(); } catch(e) {} try { window.draw(); } catch(e) {} } 
 }
