@@ -1,6 +1,6 @@
 // ==========================================
-// RECORDER.JS - AUTO-BATTLER CINEMATIC EDITION
-// [TỰ ĐỘNG VẼ CẢ GĂNG TAY LẪN CẲNG TAY VÀO VIDEO TẢI VỀ]
+// RECORDER.JS - CINEMATIC EDITION (ĐÃ FIX LỖI BLANK VIDEO)
+// [NÂNG CẤP: VÒNG LẶP QUAY PHIM ĐỘC LẬP 60FPS KHÔNG BỊ ĐEN MÀN HÌNH]
 // ==========================================
 
 window.mediaRecorderH = null; window.recordedChunksH = []; window.recordCanvasH = null; window.recordCtxH = null;
@@ -12,7 +12,7 @@ window.currentVideoExt = "webm";
 window.savedVideos = [];
 window.bgmSourceNode = null;
 
-// TẢI TRƯỚC ẢNH NỨT MÀN HÌNH
+// TẢI TRƯỚC ẢNH NỨT MÀN HÌNH ĐỂ GHI HÌNH KHÔNG BỊ GIẬT
 window.fpsAssets = {
     crack: new Image()
 };
@@ -62,7 +62,16 @@ window.startRecording = function() {
     } catch(e) {}
     
     window.recordedChunksH = []; window.recordedChunksV = [];
+    window.isRecording = true; // Bật cờ ghi hình
     
+    // 🌟 SỬA LỖI Ở ĐÂY: Tạo vòng lặp máy quay liên tục copy hình ảnh game vào Video
+    const recordLoop = () => {
+        if (!window.isRecording) return;
+        window.captureFrames(); // Chụp ảnh liên tục 60 khung hình/giây
+        requestAnimationFrame(recordLoop);
+    };
+    recordLoop(); // Bấm máy quay!
+
     let videoStreamH = window.recordCanvasH.captureStream(60); 
     let videoStreamV = window.recordCanvasV.captureStream(60); 
     let audioTracks = (window.recordAudioDestination && window.recordAudioDestination.stream) ? window.recordAudioDestination.stream.getAudioTracks() : [];
@@ -115,14 +124,14 @@ window.startRecording = function() {
     };
 
     window.mediaRecorderH.onstop = finalizeRecordings; window.mediaRecorderV.onstop = finalizeRecordings;
-    window.mediaRecorderH.start(); window.mediaRecorderV.start(); window.isRecording = true;
+    window.mediaRecorderH.start(); window.mediaRecorderV.start(); 
 };
 
 window.stopRecording = function() { 
     if (!window.isRecording) return; 
     try { window.mediaRecorderH.requestData(); window.mediaRecorderV.requestData(); } catch(e){} 
     window.mediaRecorderH.stop(); window.mediaRecorderV.stop(); 
-    window.isRecording = false; 
+    window.isRecording = false;  // Tắt cờ ghi hình -> Ngừng vòng lặp chụp ảnh
     if (window.silenceOsc) { window.silenceOsc.stop(); window.silenceOsc = null; }
     if (window.bgmSourceNode) { window.bgmSourceNode.disconnect(); window.bgmSourceNode = null; }
 };
@@ -161,7 +170,6 @@ window.captureFrames = function() {
     let isBlockR = rightGlove && rightGlove.classList.contains("glove-block-right");
 
     const drawGloveImage = (ctx, isH, isLeft, state) => {
-        // Lấy link ảnh từ thẻ DIV ngoài giao diện (Chỗ bạn chọn tướng)
         let gloveEl = isLeft ? document.getElementById("left-glove") : document.getElementById("right-glove");
         if (!gloveEl) return;
         
@@ -173,28 +181,26 @@ window.captureFrames = function() {
         if (!myGloveObj) {
             myGloveObj = new Image(); myGloveObj.crossOrigin = "Anonymous"; myGloveObj.src = url;
             window.hudImages[url] = myGloveObj;
-            return; // Đợi load xong mới vẽ
+            return; 
         }
 
         ctx.save();
-        
-        // Cấu hình toạ độ giả lập CSS Perspective cho Video
         let x, y, rot, size, scaleX = 1, scaleY = 1;
         
         if (isH) {
-            size = 650; // Bản ngang: Găng tay rất to
+            size = 650; 
             if (isLeft) {
                 if (state === 'punch') { x = 650; y = 300; size = 400; rot = 0; } 
                 else if (state === 'block') { x = 550; y = 500; rot = 35; ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; } 
                 else { x = -50; y = 700; rot = 15; } 
             } else {
-                scaleX = -1; // Lật ảnh cho tay phải
+                scaleX = -1; 
                 if (state === 'punch') { x = 1270; y = 300; size = 400; rot = 0; }
                 else if (state === 'block') { x = 1370; y = 500; rot = -35; ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; }
                 else { x = 1970; y = 700; rot = -15; }
             }
         } else {
-            size = 450; // Bản dọc Tiktok
+            size = 450; 
             if (isLeft) {
                 if (state === 'punch') { x = 350; y = 900; size = 300; rot = 0; }
                 else if (state === 'block') { x = 200; y = 1100; rot = 35; ctx.shadowBlur = 30; ctx.shadowColor = "#00f3ff"; }
@@ -228,19 +234,16 @@ window.captureFrames = function() {
         ctx.lineTo(size/2 - armWidth/2 - 10, size * 0.6 + armLength); 
         ctx.fill();
 
-        // BĂNG QUẤN CỔ TAY (Wrist Tape)
         ctx.fillStyle = "#bdc3c7";
         ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.6, armWidth - 36, size * 0.15);
         ctx.fillStyle = "rgba(0,0,0,0.4)";
         ctx.fillRect(size/2 - armWidth/2 + 18, size * 0.7, armWidth - 36, size * 0.05);
         ctx.restore();
 
-        // Vẽ ảnh Găng tay đè lên trên (Găng đỏ, Găng xanh tùy nhân vật)
         ctx.drawImage(myGloveObj, 0, 0, size, size);
         ctx.restore();
     };
 
-    // Vẽ găng trái và phải cho cả 2 màn hình
     drawGloveImage(ctxH, true, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle'));
     drawGloveImage(ctxH, true, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
     drawGloveImage(ctxV, false, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle'));
