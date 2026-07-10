@@ -458,14 +458,12 @@ body {
     bottom: -40px; 
     width: 280px; 
     height: 280px;
-    background-image: url('https://cdn-icons-png.flaticon.com/512/2950/2950586.png'); /* Găng đỏ mặc định */
+    /* 🌟 THAY LINK ẢNH GĂNG TAY MỚI CỦA BẠN VÀO ĐÂY */
+    background-image: url('https://cdn-icons-png.flaticon.com/512/7510/7510619.png'); 
     background-size: contain; 
     background-repeat: no-repeat; 
     background-position: center;
-    
-    /* 🌟 QUAN TRỌNG: Thêm phép toán cộng hưởng biến để găng tay tự tịnh tiến theo địch */
     transition: transform 0.08s cubic-bezier(0.1, 0.8, 0.2, 1), filter 0.2s;
-    
     filter: drop-shadow(0 25px 20px rgba(0,0,0,0.8)); 
     z-index: 100; 
     pointer-events: none;
