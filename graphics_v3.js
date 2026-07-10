@@ -1,11 +1,11 @@
 // ==========================================
-// GRAPHICS_V3.JS - UNREAL ENGINE SHADING EDITION (V8.0)
-// [ĐỈNH CAO: DA THỊT ĐẪM MỒ HÔI, KHÓI THỞ DỐC, SÁU MÚI 3D, BÓNG NỘI THỂ]
+// GRAPHICS_V3.JS - APEX VISUALS & ANIME EDITION (V9.0)
+// [ĐỈNH CAO: SÀN PHẢN CHIẾU, NỔI GÂN TAY, HÀO QUANG LỬA ĐỘNG, VỆT MẮT SÁNG]
 // ==========================================
 
 window.drawBoxingRing = function(ctx, canvasWidth, canvasHeight) {
     let cmap = window.currentMap || {};
-    let cAudience = cmap.audience || "#050608", cMat = cmap.mat || "#1e272e", cSpotlight = cmap.spotlight || "rgba(0, 243, 255, 0.15)", cRopes = cmap.ropes || ["#ff4757", "#ffffff", "#ff4757"], cLogo = cmap.logo || "FIGHTER";
+    let cAudience = cmap.audience || "#050608", cMat = cmap.mat || "#111820", cSpotlight = cmap.spotlight || "rgba(0, 243, 255, 0.15)", cRopes = cmap.ropes || ["#ff4757", "#ffffff", "#ff4757"], cLogo = cmap.logo || "FIGHTER";
     let vanishY = (window.GROUND_Y || 320) - 80; 
 
     ctx.fillStyle = cAudience; ctx.fillRect(-canvasWidth, -canvasHeight, canvasWidth * 3, canvasHeight * 3);
@@ -38,8 +38,13 @@ window.drawBoxingRing = function(ctx, canvasWidth, canvasHeight) {
     }
     ctx.restore();
 
-    ctx.fillStyle = cMat; ctx.beginPath(); ctx.moveTo(-200, canvasHeight); ctx.lineTo(canvasWidth + 200, canvasHeight); ctx.lineTo(canvasWidth - 150, vanishY); ctx.lineTo(150, vanishY); ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineWidth = 10; ctx.stroke();
+    // 🌟 SÀN VÕ ĐÀI PHẢN CHIẾU KÍNH GLOSSY
+    let matGrad = ctx.createLinearGradient(0, vanishY, 0, canvasHeight);
+    matGrad.addColorStop(0, cMat); matGrad.addColorStop(1, "#05080c"); // Sàn tối dần về phía camera tạo chiều sâu
+    ctx.fillStyle = matGrad; ctx.beginPath(); ctx.moveTo(-200, canvasHeight); ctx.lineTo(canvasWidth + 200, canvasHeight); ctx.lineTo(canvasWidth - 150, vanishY); ctx.lineTo(150, vanishY); ctx.fill();
+    
+    // Viền phát sáng ranh giới sàn
+    ctx.strokeStyle = "rgba(0, 243, 255, 0.3)"; ctx.lineWidth = 2; ctx.stroke();
 
     ctx.save(); ctx.translate(canvasWidth/2, (window.GROUND_Y || 320) + 20); ctx.scale(1, 0.3); ctx.globalAlpha = 0.15;
     ctx.font = "900 110px Impact"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff"; ctx.fillText(cLogo, 0, 0); ctx.restore();
@@ -90,7 +95,7 @@ window.drawBaseLimbFPS = function(p) {
 };
 
 // ==========================================
-// 🌟 UNREAL RENDERING ENGINE
+// 🌟 UNREAL RENDERING ENGINE 9.0
 // ==========================================
 window.drawStickman = function(ctx, p, isTrail = false) {
     if(!p || isNaN(p.x) || isNaN(p.y)) return; ctx.save(); ctx.translate(p.x, p.y); 
@@ -100,48 +105,81 @@ window.drawStickman = function(ctx, p, isTrail = false) {
     let { head, neck, pelvis, shoulderL, shoulderR, footL, kneeL, footR, kneeR, handL, elbowL, handR, elbowR } = pts;
 
     let bType = p.bodyType || 'muscular'; let pType = p.pantsType || 'boxing'; let aura = p.auraType || 'none'; 
-    let wArm = bType === 'heavy' ? 20 : (bType === 'lean' ? 12 : 16);
-    let wLeg = bType === 'heavy' ? 22 : (bType === 'lean' ? 14 : 18);
-    let torsoW = bType === 'heavy' ? 32 : (bType === 'lean' ? 18 : 24);
-
+    let wArm = bType === 'heavy' ? 20 : (bType === 'lean' ? 12 : 16); let wLeg = bType === 'heavy' ? 22 : (bType === 'lean' ? 14 : 18); let torsoW = bType === 'heavy' ? 32 : (bType === 'lean' ? 18 : 24);
     let sColor = p.skinColor || "#f1c27d", jColor = p.jerseyColor || p.color || "#0984e3"; 
     let pColor = p.pantsColor || "#1e272e", sockC = p.socksColor || "#fff", shoeC = p.shoesColor || "#f1c40f";
 
     let hpRatio = (p.hp !== undefined && p.maxHp) ? Math.max(0, p.hp / p.maxHp) : 1;
-    let sweatFactor = Math.max(0, 1 - hpRatio * 1.5); // Càng ít máu da càng bóng láng mồ hôi
+    let sweatFactor = Math.max(0, 1 - hpRatio * 1.5); 
 
-    // 1. AURA VÀ BÓNG DƯỚI CHÂN
+    // 🌟 1. SÀN PHẢN CHIẾU & BÓNG ĐỔ DƯỚI CHÂN
+    if (!isTrail && p.hp > 0 && p.state !== 'ko_falling') { 
+        // Bóng đen gốc
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.beginPath(); ctx.ellipse(0, 5, 55, 12, 0, 0, Math.PI*2); ctx.fill(); 
+        // Phản chiếu màu sắc lên mặt kính của sàn
+        let refGrad = ctx.createRadialGradient(0, 15, 0, 0, 15, 60);
+        refGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(jColor):'255,255,255'}, 0.4)`);
+        refGrad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = refGrad; ctx.beginPath(); ctx.ellipse(0, 15, 60, 20, 0, 0, Math.PI*2); ctx.fill();
+    }
+
+    // 🌟 2. HÀO QUANG ANIME CHÁY RỰC (FLAME PARTICLES)
     if (aura !== 'none' && !isTrail && p.hp > 0) {
         let aColor = aura === 'fire' ? "#ff4757" : (aura === 'god' ? "#f1c40f" : "#00f3ff");
-        let aSize = Math.sin(Date.now() / 100) * 10 + 60;
-        ctx.shadowBlur = 50; ctx.shadowColor = aColor; ctx.fillStyle = aColor; ctx.globalAlpha = hpRatio < 0.3 ? 0.9 : 0.4;
-        ctx.beginPath(); ctx.ellipse(0, -60, aSize, aSize * 1.5, 0, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+        ctx.save();
+        ctx.globalCompositeOperation = "screen"; // Chế độ hòa trộn tạo độ rực
+        let t = Date.now() / 150;
+        
+        // Vẽ 12 ngọn lửa bay lên xung quanh người
+        for (let i = 0; i < 12; i++) {
+            let pX = Math.sin(t + i * 2) * 50; 
+            let pY = -10 - ((t * 20 + i * 15) % 120); 
+            let pSize = Math.max(2, 20 - Math.abs(pY) * 0.15); // Lửa nhỏ dần khi bay cao
+            
+            let flameGrad = ctx.createRadialGradient(pX, pY, 0, pX, pY, pSize);
+            flameGrad.addColorStop(0, "#fff"); flameGrad.addColorStop(0.3, aColor); flameGrad.addColorStop(1, "rgba(0,0,0,0)");
+            
+            ctx.fillStyle = flameGrad;
+            ctx.beginPath();
+            ctx.moveTo(pX, pY - pSize*1.5); ctx.quadraticCurveTo(pX + pSize, pY, pX, pY + pSize); ctx.quadraticCurveTo(pX - pSize, pY, pX, pY - pSize*1.5);
+            ctx.fill();
+        }
+        ctx.restore();
     }
-    if (!isTrail && p.hp > 0 && p.state !== 'ko_falling') { ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.beginPath(); ctx.ellipse(0, 5, 55, 12, 0, 0, Math.PI*2); ctx.fill(); }
 
-    // 🌟 2. HÀM RENDER DA THỊT ĐẪM MỒ HÔI (GLOSS SHADER)
+    // 🌟 3. HÀM RENDER CƠ BẮP & GÂN GUỐC (VASCULARITY)
     const draw3DLimb = (start, end, width, color, isSkin = false) => {
         let dx = end.x - start.x; let dy = end.y - start.y; let len = Math.sqrt(dx*dx + dy*dy); let angle = Math.atan2(dy, dx);
         ctx.save(); ctx.translate(start.x, start.y); ctx.rotate(angle);
         
         let grad = ctx.createLinearGradient(0, -width/2, 0, width/2);
-        grad.addColorStop(0, "rgba(5,5,5,0.85)"); // Đổ bóng sâu
-        grad.addColorStop(0.2, color);
-        // Điểm lóa sáng mồ hôi 3D
+        grad.addColorStop(0, "rgba(5,5,5,0.85)"); grad.addColorStop(0.2, color);
         if (isSkin && sweatFactor > 0) { grad.addColorStop(0.5, `rgba(255,255,255,${0.3 * sweatFactor})`); }
-        grad.addColorStop(0.8, color);
-        grad.addColorStop(1, "rgba(5,5,5,0.9)"); 
+        grad.addColorStop(0.8, color); grad.addColorStop(1, "rgba(5,5,5,0.9)"); 
 
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         ctx.lineWidth = width + 5; ctx.strokeStyle = "#000"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
         ctx.lineWidth = width; ctx.strokeStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+
+        // 🌟 NỔI GÂN XANH KHI KIỆT SỨC HOẶC ĐIÊN CUỒNG
+        if (isSkin && hpRatio <= 0.5 && bType === 'muscular') {
+            ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(0, 100, 50, 0.4)"; // Mạch máu màu lục
+            ctx.beginPath();
+            ctx.moveTo(len*0.2, width/4);
+            ctx.quadraticCurveTo(len*0.5, width/2, len*0.8, 0);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(len*0.4, -width/4);
+            ctx.quadraticCurveTo(len*0.6, 0, len*0.9, -width/5);
+            ctx.stroke();
+        }
 
         if (isSkin && hpRatio <= 0.6) {
             ctx.lineWidth = width * 0.4; ctx.strokeStyle = "rgba(75, 0, 130, 0.35)"; ctx.beginPath(); ctx.moveTo(len * 0.3, -width/4); ctx.lineTo(len * 0.6, 0); ctx.stroke();
             if (hpRatio <= 0.3) { ctx.lineWidth = 2; ctx.strokeStyle = "rgba(220, 0, 0, 0.9)"; ctx.beginPath(); ctx.moveTo(len * 0.4, width/4); ctx.lineTo(len * 0.7, -width/5); ctx.stroke(); ctx.fillStyle = "rgba(220, 0, 0, 0.9)"; ctx.beginPath(); ctx.arc(len * 0.55, width/2 + 2, 2, 0, Math.PI*2); ctx.fill(); }
         }
         
-        // Cạnh ven sáng Rim-light siêu thực
         ctx.lineWidth = 2; ctx.strokeStyle = `rgba(255,255,255,${0.2 + sweatFactor*0.3})`; ctx.beginPath(); ctx.moveTo(0, -width/2.5); ctx.lineTo(len, -width/2.5); ctx.stroke();
         ctx.restore();
     };
@@ -161,46 +199,31 @@ window.drawStickman = function(ctx, p, isTrail = false) {
 
     ctx.lineWidth = 4; ctx.fillStyle = p.hasChampBelt ? "#f1c40f" : "#111"; ctx.beginPath(); ctx.roundRect(pelvis.x - 25, pelvis.y - 8, 50, 10, 4); ctx.fill(); ctx.stroke();
 
-    // 🌟 3. VẼ THÂN TRÊN VÀ ĐỔ BÓNG NỘI THỂ (AMBIENT OCCLUSION)
     let chestGrad = ctx.createLinearGradient(shoulderL.x, 0, shoulderR.x, 0);
     let tColor = p.isShirtless ? sColor : jColor;
     chestGrad.addColorStop(0, "rgba(5,5,5,0.7)"); chestGrad.addColorStop(0.2, tColor); 
-    if(p.isShirtless && sweatFactor > 0) chestGrad.addColorStop(0.5, `rgba(255,255,255,${0.2 * sweatFactor})`); // Lóa mồ hôi ngực
+    if(p.isShirtless && sweatFactor > 0) chestGrad.addColorStop(0.5, `rgba(255,255,255,${0.2 * sweatFactor})`); 
     chestGrad.addColorStop(0.8, tColor); chestGrad.addColorStop(1, "rgba(5,5,5,0.7)");
     
     ctx.fillStyle = chestGrad; ctx.lineWidth = 5; ctx.strokeStyle = "#000";
     ctx.beginPath(); ctx.moveTo(shoulderL.x - 8, shoulderL.y - 5); ctx.quadraticCurveTo(0, neck.y + 15, shoulderR.x + 8, shoulderR.y - 5); ctx.lineTo(pelvis.x + torsoW, pelvis.y - 8); ctx.lineTo(pelvis.x - torsoW, pelvis.y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    // Bóng râm dưới cổ hắt xuống ngực
     let occlGrad = ctx.createRadialGradient(0, neck.y + 15, 0, 0, neck.y + 15, 30);
     occlGrad.addColorStop(0, "rgba(0,0,0,0.5)"); occlGrad.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = occlGrad; ctx.beginPath(); ctx.arc(0, neck.y + 15, 30, 0, Math.PI*2); ctx.fill();
 
-    // 🌟 4. HD ABS & PECTORALS (CƠ NGỰC VÀ BỤNG DẬP NỔI 3D)
     if (p.isShirtless && (bType === 'muscular' || bType === 'lean')) {
-        let absOpacity = 0.4 + sweatFactor * 0.3; // Mồ hôi làm sáu múi rõ nét hơn
-        
+        let absOpacity = 0.4 + sweatFactor * 0.3; 
         const drawEmbossLine = (x1, y1, x2, y2, curveY) => {
-            // Nét tối tạo độ sâu
             ctx.lineWidth = 3; ctx.strokeStyle = `rgba(0,0,0,${absOpacity})`;
             ctx.beginPath(); ctx.moveTo(x1, y1); if(curveY) ctx.quadraticCurveTo((x1+x2)/2, curveY, x2, y2); else ctx.lineTo(x2, y2); ctx.stroke();
-            // Nét sáng tạo độ lồi
             ctx.lineWidth = 2; ctx.strokeStyle = `rgba(255,255,255,${absOpacity*0.6})`;
             ctx.beginPath(); ctx.moveTo(x1, y1+2); if(curveY) ctx.quadraticCurveTo((x1+x2)/2, curveY+2, x2, y2+2); else ctx.lineTo(x2, y2+2); ctx.stroke();
         };
-
-        // Cơ ngực (Pectorals)
         drawEmbossLine(0, shoulderL.y + 20, shoulderL.x + 15, shoulderL.y + 12, shoulderL.y + 25);
         drawEmbossLine(0, shoulderR.y + 20, shoulderR.x - 15, shoulderR.y + 12, shoulderR.y + 25);
-        
-        // Rãnh bụng giữa
         drawEmbossLine(0, shoulderL.y + 20, 0, pelvis.y - 10);
-        
-        // Sáu múi
-        for(let a=0; a<3; a++) {
-            let abY = shoulderL.y + 35 + (a * 15);
-            drawEmbossLine(-12, abY, 12, abY, abY + 5);
-        }
+        for(let a=0; a<3; a++) { let abY = shoulderL.y + 35 + (a * 15); drawEmbossLine(-12, abY, 12, abY, abY + 5); }
     }
 
     if (!p.isShirtless && hpRatio <= 0.5) {
@@ -218,60 +241,61 @@ window.drawStickman = function(ctx, p, isTrail = false) {
         ctx.save(); ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.closePath(); ctx.clip(); ctx.drawImage(window.enemyFaceImg, head.x - faceSize/2, head.y - faceSize/2, faceSize, faceSize); ctx.restore();
         ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.lineWidth = 5; ctx.strokeStyle = "#000"; ctx.stroke();
         
+        // 🌟 4. BĂNG TRÁN DYNAMIC VẬT LÝ
+        if (p.hasHeadband) {
+            ctx.fillStyle = "#e74c3c"; ctx.lineWidth = 2; ctx.strokeStyle = "#000";
+            // Dây cột sau gáy bay trong gió
+            let wind = window.globalWind || Math.sin(Date.now()/500)*2;
+            ctx.beginPath(); ctx.moveTo(head.x + faceSize/2 - 10, head.y);
+            ctx.quadraticCurveTo(head.x + 80, head.y - 20 + wind*15, head.x + 100 + wind*10, head.y + 20); ctx.lineTo(head.x + 90 + wind*10, head.y + 25);
+            ctx.quadraticCurveTo(head.x + 70, head.y - 10 + wind*15, head.x + faceSize/2 - 10, head.y + 10); ctx.fill(); ctx.stroke();
+            // Băng quanh trán
+            ctx.beginPath(); ctx.rect(head.x - faceSize/2, head.y - faceSize/3, faceSize, 12); ctx.fill(); ctx.stroke();
+        }
+
         if (hpRatio <= 0.5) {
             ctx.fillStyle = "rgba(75, 0, 130, 0.55)"; ctx.beginPath(); ctx.ellipse(head.x + 12, head.y - 8, 14, 10, 0.2, 0, Math.PI*2); ctx.fill();
             if (hpRatio <= 0.3) { 
                 ctx.strokeStyle = "rgba(220, 0, 0, 0.9)"; ctx.lineWidth = 4; ctx.lineCap = "round"; 
                 ctx.beginPath(); ctx.moveTo(head.x - 5, head.y + 15); ctx.quadraticCurveTo(head.x - 12, head.y + 25, head.x - 8, head.y + 35); ctx.stroke(); 
-                
-                // 🌟 5. MÁU NHỎ GIỌT ĐỘNG TỪ MIỆNG (PHYSICS)
                 if(!window.bloodDrops) window.bloodDrops = [];
-                if(Math.random() < 0.05 && p.state !== 'ko_falling' && p.state !== 'dead') {
-                    window.bloodDrops.push({ x: head.x - 8, y: head.y + 38, vy: 0 });
-                }
+                if(Math.random() < 0.05 && p.state !== 'ko_falling' && p.state !== 'dead') { window.bloodDrops.push({ x: head.x - 8, y: head.y + 38, vy: 0 }); }
             }
         }
 
+        // 🌟 5. VỆT SÁNG MẮT (GOD-EYE TRAILS)
         if (p.glowingEyes) {
-            ctx.globalCompositeOperation = 'lighter'; // Phát sáng chói
+            ctx.globalCompositeOperation = 'lighter'; 
+            let trailLength = Math.max(0, Math.abs(p.x - (p.lastX || p.x)) * 2); // Kéo vệt sáng dựa trên vận tốc
+            p.lastX = p.x; // Lưu vết
+            
             ctx.shadowBlur = 20; ctx.shadowColor = p.glowingEyes; ctx.fillStyle = p.glowingEyes;
-            ctx.beginPath(); ctx.ellipse(head.x - 12, head.y - 5, 8, 3, Math.PI/8, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(head.x + 12, head.y - 5, 8, 3, -Math.PI/8, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(head.x - 12 - trailLength/2, head.y - 5, 8 + trailLength, 3, Math.PI/8, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(head.x + 12 - trailLength/2, head.y - 5, 8 + trailLength, 3, -Math.PI/8, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'source-over';
         }
     } else { ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(head.x, head.y, faceSize/2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
 
-    // RENDER MÁU RƠI
     if(window.bloodDrops) {
         ctx.fillStyle = "rgba(220, 0, 0, 0.9)";
         for (let i = window.bloodDrops.length - 1; i >= 0; i--) {
-            let bd = window.bloodDrops[i];
-            bd.vy += 0.5; bd.y += bd.vy;
+            let bd = window.bloodDrops[i]; bd.vy += 0.5; bd.y += bd.vy;
             ctx.beginPath(); ctx.arc(bd.x, bd.y, 2.5, 0, Math.PI*2); ctx.fill();
             if (bd.y > pelvis.y + 50) window.bloodDrops.splice(i, 1);
         }
     }
 
-    // 🌟 6. HIỆU ỨNG KHÓI THỞ DỐC (BREATHING FROST) KHI KIỆT SỨC
     if (hpRatio <= 0.40 && p.state !== 'ko_falling' && p.state !== 'dead') {
         if(!window.breathMist) window.breathMist = [];
-        
-        // Phả khói theo nhịp thở (khi đầu cúi xuống thấp nhất)
         let bouncePhase = Math.sin(Date.now() / (hpRatio < 0.2 ? 250 : 120));
         if (bouncePhase > 0.8 && Math.random() < 0.4) {
-            window.breathMist.push({
-                x: head.x + (Math.random()*10 - 5), y: head.y + 20,
-                vx: (Math.random() - 0.5) * 1.5, vy: -1 - Math.random() * 2,
-                life: 30, maxLife: 30, size: 5 + Math.random() * 8
-            });
+            window.breathMist.push({ x: head.x + (Math.random()*10 - 5), y: head.y + 20, vx: (Math.random() - 0.5) * 1.5, vy: -1 - Math.random() * 2, life: 30, maxLife: 30, size: 5 + Math.random() * 8 });
         }
     }
     
-    // Render khói thở
     if(window.breathMist) {
         for (let i = window.breathMist.length - 1; i >= 0; i--) {
-            let bm = window.breathMist[i];
-            bm.x += bm.vx; bm.y += bm.vy; bm.size += 0.5; bm.life--;
+            let bm = window.breathMist[i]; bm.x += bm.vx; bm.y += bm.vy; bm.size += 0.5; bm.life--;
             ctx.fillStyle = `rgba(255, 255, 255, ${ (bm.life / bm.maxLife) * 0.4 })`;
             ctx.beginPath(); ctx.arc(bm.x, bm.y, bm.size, 0, Math.PI*2); ctx.fill();
             if(bm.life <= 0) window.breathMist.splice(i, 1);
