@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - THE DIRECTOR'S CUT EDITION (V36.0 - CINEMATIC MENU)
-// [ĐỈNH CAO: TIA SÁNG GOD-RAYS, HOLOGRAM GLITCH, VS QUOTES, BỤI LƠ LỬNG]
+// MAIN.JS - THE KINETIC UI EDITION (V37.0 - ULTIMATE MENU)
+// [ĐỈNH CAO: HỐ ĐEN NĂNG LƯỢNG, QUÉT LASER 3D, GIAO DIỆN GLITCH IMPACT]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -16,11 +16,9 @@ window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBl
 window.enemyFaceImg = new Image(); 
 window.enemyGloveImg = new Image(); 
 
-// 🌟 HỆ THỐNG BIẾN MENU 3D
-window.previewGlitchTimer = 0; // Biến hiệu ứng nhiễu sóng khi chọn tướng
-window.menuDustParticles = []; // Hạt bụi lơ lửng
+window.previewGlitchTimer = 0; 
+window.menuDustParticles = []; 
 
-// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I
 window.announce = function(text, pitch = 0.8) {
     try {
         if (window.isMuted) return;
@@ -31,7 +29,6 @@ window.announce = function(text, pitch = 0.8) {
     } catch(e) {}
 };
 
-// Khởi tạo hạt bụi cho Menu
 for(let i=0; i<40; i++) {
     window.menuDustParticles.push({
         x: Math.random() * 2000 - 1000, y: Math.random() * 1000,
@@ -74,31 +71,35 @@ window.renderCharacterGrid = function() {
         card.innerHTML = `<div class="char-avatar"><img src="${item.avatarUrl || 'https://api.dicebear.com/7.x/adventurer/png?seed=error'}"></div><div class="char-name">${item.className || 'Unknown'}</div>`;
         
         card.onclick = async () => { 
-            // Nếu click lại đúng tướng đang chọn thì thôi
             if (window.selectedRedClass === id) return;
 
             window.selectedRedClass = id; 
-            document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected')); 
-            card.classList.add('selected'); 
+            document.querySelectorAll('.char-card').forEach(c => { c.classList.remove('selected'); c.style.transform = "scale(1)"; }); 
             
-            if(typeof window.playSound === 'function') window.playSound(400, 'square', 0.2, 0.5);
-            window.announce("A NEW CHALLENGER!", 1.1); // Hô to khi chọn tướng
-            window.previewGlitchTimer = 35; // 🌟 KÍCH HOẠT HOLOGRAM GLITCH KHI ĐỔI TƯỚNG
+            // 🌟 HIỆU ỨNG THẺ BÀI GIẬT CẤP (IMPACT)
+            card.classList.add('selected'); 
+            card.style.transition = "transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+            card.style.transform = "scale(1.15) rotate(-3deg)";
+            setTimeout(() => { if (card.classList.contains('selected')) card.style.transform = "scale(1.05) rotate(0deg)"; }, 150);
+
+            if(typeof window.playSound === 'function') {
+                window.playSound(600, 'square', 0.1, 0.4);
+                setTimeout(() => window.playSound(200, 'triangle', 0.2, 0.6), 50); // Tiếng Echo vi tính
+            }
+            window.announce("CHALLENGER ACCEPTS!", 0.9); 
+            window.previewGlitchTimer = 35; 
 
             let desc = document.getElementById("desc-red");
             await window.loadCharacterDynamic(id);
             let activeItem = window.classStats[id];
             
-            window.enemyFaceImg.crossOrigin = "Anonymous";
-            window.enemyFaceImg.src = activeItem.avatarUrl;
-
-            let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
-            window.enemyGloveImg.crossOrigin = "Anonymous";
-            window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
+            window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl;
+            window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = activeItem.gloveUrl || 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
 
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:10px; text-align: left; animation: fadeIn 0.3s ease;">
-                    <span style="font-size:35px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 15px ${activeItem.color || '#f1c40f'}; letter-spacing: 2px;">${activeItem.className}</span>
+                    <span style="font-size:38px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 15px ${activeItem.color || '#f1c40f'}; letter-spacing: 2px;">${activeItem.className}</span>
+                    <div style="height: 2px; background: linear-gradient(90deg, ${activeItem.color || '#f1c40f'}, transparent); width: 80%; margin-bottom: 5px;"></div>
                     <span style="color:#fff; font-size:18px;">❤️ Sinh Lực: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
                     <span style="color:#fff; font-size:18px;">💨 Tốc Độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
                     <span style="color:#fff; font-size:18px;">✨ Sức Mạnh: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
@@ -125,7 +126,7 @@ window.backToMenu = function() {
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "block"; 
     window.gameOver = true; window.isLoopRunning = false; 
     if(window.selectedRedClass && window.classStats) {
-        window.previewGlitchTimer = 35; // Glitch lại khi từ trận quay ra
+        window.previewGlitchTimer = 35; 
         window.startPreviewLoop(window.classStats[window.selectedRedClass]);
     }
 }
@@ -135,20 +136,17 @@ window.startGame = async function() {
     window.isPreviewRunning = false; 
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     
-    // Đọc thông số đối thủ
     let allKeys = Object.keys(window.classStats);
     let randomEnemyId = allKeys[Math.floor(Math.random() * allKeys.length)];
     await window.loadCharacterDynamic(randomEnemyId);
     let eChar = window.classStats[randomEnemyId]; 
     let mChar = window.classStats[window.selectedRedClass];
 
-    // 🌟 KHO THOẠI TRƯỚC TRẬN ĐẤU (PRE-MATCH QUOTES)
     let pQuotes = ["Ta sẽ nghiền nát ngươi!", "Chuẩn bị vào viện đi!", "Để xem mi trụ được mấy giây?", "Sức mạnh thực sự là đây!"];
     let eQuotes = ["Đừng hòng chạy thoát!", "Đến đây mà lấy mạng ta!", "Ngươi đùa ta chắc?", "Múa may vớ vẩn!"];
     let q1 = pQuotes[Math.floor(Math.random() * pQuotes.length)];
     let q2 = eQuotes[Math.floor(Math.random() * eQuotes.length)];
 
-    // 🌟 MÀN HÌNH VS SCREEN OVERLAY CÓ PHỤ ĐỀ
     let vsDiv = document.createElement("div");
     vsDiv.id = "vs-screen-overlay";
     vsDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: #000; display: flex; overflow: hidden;`;
@@ -176,7 +174,6 @@ window.startGame = async function() {
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
     window.announce("FIGHT!", 0.9);
 
-    // Chờ 2.2 giây để khán giả đọc kịp câu thoại rồi mới vào trận
     setTimeout(async () => {
         vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
         setTimeout(() => vsDiv.remove(), 300);
@@ -252,6 +249,8 @@ window.matchStartFPS = async function(randomEnemyId) {
     let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
+    setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); 
+
     if (typeof window.startRecording === 'function') window.startRecording();
 }
 
@@ -281,34 +280,31 @@ window.startPreviewLoop = function(charStats) {
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
             pCtx.save();
             
-            // Lấy tọa độ 3D Parallax mượt mà
             curX += (window.mouseX * 40 - curX) * 0.1;
             curY += (window.mouseY * 20 - curY) * 0.1;
 
-            // 🌟 1. VẼ TIA SÁNG THẦN THÁNH (GOD RAYS) PHÍA SAU
+            // 1. TIA SÁNG GOD RAYS
             pCtx.save();
-            pCtx.translate(pCanvas.width/2 - curX*0.2, -100); // Nguồn sáng trên cùng hơi nhích theo góc nhìn
+            pCtx.translate(pCanvas.width/2 - curX*0.2, -100); 
             let rayGrad = pCtx.createLinearGradient(0, 0, 0, pCanvas.height + 200);
             rayGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(charStats.color || '#fff'):'255,255,255'}, 0.25)`);
             rayGrad.addColorStop(1, "rgba(0,0,0,0)");
             pCtx.fillStyle = rayGrad;
             
-            // Vẽ 3 dải luồng sáng dao động
             for(let r=0; r<3; r++) {
-                let angBase = (r - 1) * 0.4; // Tỏa ra 3 hướng
-                let sway = Math.sin(pTime*0.01 + r) * 0.15; // Ánh sáng đung đưa
+                let angBase = (r - 1) * 0.4; 
+                let sway = Math.sin(pTime*0.01 + r) * 0.15; 
                 pCtx.beginPath();
                 pCtx.moveTo(0, 0);
                 pCtx.lineTo(Math.cos(Math.PI/2 + angBase + sway - 0.2) * 1500, Math.sin(Math.PI/2 + angBase + sway - 0.2) * 1500);
                 pCtx.lineTo(Math.cos(Math.PI/2 + angBase + sway + 0.2) * 1500, Math.sin(Math.PI/2 + angBase + sway + 0.2) * 1500);
-                pCtx.closePath();
-                pCtx.fill();
+                pCtx.closePath(); pCtx.fill();
             }
             pCtx.restore();
 
             pCtx.translate(curX, curY);
 
-            // 🌟 2. VẼ MẶT SÀN KÍNH PHẢN CHIẾU Ở MENU
+            // 2. MẶT SÀN KÍNH
             let matGrad = pCtx.createLinearGradient(0, pCanvas.height - 100, 0, pCanvas.height);
             matGrad.addColorStop(0, "#0a0f16"); matGrad.addColorStop(1, "#020305");
             pCtx.fillStyle = matGrad; pCtx.fillRect(-100, pCanvas.height - 100, pCanvas.width + 200, 100);
@@ -316,15 +312,31 @@ window.startPreviewLoop = function(charStats) {
             pCtx.strokeStyle = "rgba(0, 243, 255, 0.5)"; pCtx.lineWidth = 2;
             pCtx.beginPath(); pCtx.moveTo(-100, pCanvas.height - 100); pCtx.lineTo(pCanvas.width + 100, pCanvas.height - 100); pCtx.stroke();
 
+            // 🌟 3. HỐ ĐEN NĂNG LƯỢNG (VORTEX) DƯỚI CHÂN NHÂN VẬT
             if (charStats.auraType && charStats.auraType !== 'none') {
                 let aColor = charStats.auraType === 'fire' ? "#ff4757" : (charStats.auraType === 'god' ? "#f1c40f" : "#00f3ff");
-                let refGrad = pCtx.createRadialGradient(pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 0, pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 150);
-                refGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(aColor):'255,255,255'}, 0.5)`);
-                refGrad.addColorStop(1, "rgba(0,0,0,0)");
-                pCtx.fillStyle = refGrad; pCtx.beginPath(); pCtx.ellipse(pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 150, 40, 0, 0, Math.PI*2); pCtx.fill();
+                pCtx.save();
+                pCtx.translate(pCanvas.width/2 - curX*0.5, pCanvas.height - 60);
+                pCtx.scale(1, 0.25); // Ép dẹt thành hình elip 3D
+                pCtx.rotate(pTime * 0.05); // Lốc xoáy quay tròn
+                
+                // Vẽ các vòng cung xoáy
+                pCtx.strokeStyle = aColor; pCtx.lineWidth = 3; pCtx.globalAlpha = 0.6;
+                for (let i = 0; i < 4; i++) {
+                    pCtx.beginPath();
+                    pCtx.arc(0, 0, 80 + Math.sin(pTime*0.1 + i)*20, i*Math.PI/2, i*Math.PI/2 + Math.PI/1.5);
+                    pCtx.stroke();
+                }
+                
+                // Lõi phát sáng
+                let coreGrad = pCtx.createRadialGradient(0, 0, 0, 0, 0, 150);
+                coreGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(aColor):'255,255,255'}, 0.8)`);
+                coreGrad.addColorStop(1, "rgba(0,0,0,0)");
+                pCtx.fillStyle = coreGrad; pCtx.globalAlpha = 1.0;
+                pCtx.beginPath(); pCtx.arc(0, 0, 150, 0, Math.PI*2); pCtx.fill();
+                pCtx.restore();
             }
 
-            // Nhịp thở
             let bounce = Math.sin(pTime * 0.05) * 5;
             pCtx.translate(pCanvas.width/2, pCanvas.height - 90 + bounce);
             pCtx.scale(1.8, 1.8); 
@@ -338,33 +350,40 @@ window.startPreviewLoop = function(charStats) {
             
             if(typeof window.drawStickman === 'function') window.drawStickman(pCtx, fakeChar);
             
-            pCtx.restore(); // Phục hồi sau khi vẽ nhân vật
+            // 🌟 4. HIỆU ỨNG QUÉT LASER (CYBER SCANLINE) LÊN NHÂN VẬT
+            if (pTime % 300 < 100) { // Thỉnh thoảng quét 1 lần
+                let scanY = -200 + ((pTime % 300) / 100) * 300; // Quét từ đầu xuống chân
+                pCtx.fillStyle = `rgba(${window.hexToRgb?window.hexToRgb(charStats.color || '#00f3ff'):'0,243,255'}, 0.8)`;
+                pCtx.shadowBlur = 15; pCtx.shadowColor = charStats.color || "#00f3ff";
+                pCtx.fillRect(-50, scanY, 100, 2); // Tia laser mỏng
+                pCtx.shadowBlur = 0;
+            }
 
-            // 🌟 3. VẼ HẠT BỤI LƠ LỬNG BAY VÀO MẶT CAM CÓ PARALLAX MẠNH HƠN
+            pCtx.restore();
+
+            // 🌟 5. BỤI LƠ LỬNG
             pCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
             window.menuDustParticles.forEach(d => {
-                d.x += d.vx - (window.mouseX * d.size); // Bụi to trôi nhanh hơn bụi nhỏ tạo chiều sâu 3D cực thực
+                d.x += d.vx - (window.mouseX * d.size); 
                 d.y += d.vy - (window.mouseY * d.size);
                 if (d.y < -100) d.y = pCanvas.height + 100;
                 if (d.x < -100) d.x = pCanvas.width + 100;
                 if (d.x > pCanvas.width + 100) d.x = -100;
 
-                pCtx.globalAlpha = d.alpha * (Math.sin(pTime*0.05 + d.x) * 0.5 + 0.5); // Bụi lấp lánh
+                pCtx.globalAlpha = d.alpha * (Math.sin(pTime*0.05 + d.x) * 0.5 + 0.5); 
                 pCtx.beginPath(); pCtx.arc(d.x, d.y, d.size, 0, Math.PI*2); pCtx.fill();
             });
             pCtx.globalAlpha = 1.0;
 
-            // 🌟 4. HOLOGRAM GLITCH KHI MỚI CHỌN TƯỚNG
+            // 🌟 6. HOLOGRAM GLITCH KHI CHỌN TƯỚNG
             if (window.previewGlitchTimer > 0) {
                 window.previewGlitchTimer--;
-                let gPower = window.previewGlitchTimer; // Giảm dần độ mạnh
+                let gPower = window.previewGlitchTimer; 
                 
-                // RGB Split
                 pCtx.globalCompositeOperation = 'screen';
-                pCtx.drawImage(pCanvas, (Math.random()-0.5)*gPower, 0); // Lệch đỏ ngang
+                pCtx.drawImage(pCanvas, (Math.random()-0.5)*gPower, 0); 
                 pCtx.globalCompositeOperation = 'source-over';
                 
-                // Sọc nhiễu
                 pCtx.fillStyle = `rgba(255, 255, 255, ${gPower * 0.01})`;
                 for(let i=0; i<10; i++) {
                     pCtx.fillRect(0, Math.random()*pCanvas.height, pCanvas.width, Math.random()*10);
