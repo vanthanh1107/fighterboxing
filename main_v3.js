@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - THE KINETIC UI EDITION (V37.0 - ULTIMATE MENU)
-// [ĐỈNH CAO: HỐ ĐEN NĂNG LƯỢNG, QUÉT LASER 3D, GIAO DIỆN GLITCH IMPACT]
+// MAIN.JS - GLOBAL ARCADE EDITION (V38.0 - THE SHOWCASE)
+// [ĐỈNH CAO: 100% ENGLISH, MENU CAMERA SHAKE, CYBER MATRIX DATA, EPIC QUOTES]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -19,12 +19,13 @@ window.enemyGloveImg = new Image();
 window.previewGlitchTimer = 0; 
 window.menuDustParticles = []; 
 
+// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I (ANNOUNCER VOICE)
 window.announce = function(text, pitch = 0.8) {
     try {
         if (window.isMuted) return;
         speechSynthesis.cancel(); 
         let msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'en-US'; msg.rate = 1.3; msg.pitch = pitch; msg.volume = 0.9;
+        msg.lang = 'en-US'; msg.rate = 1.2; msg.pitch = pitch; msg.volume = 1.0;
         speechSynthesis.speak(msg);
     } catch(e) {}
 };
@@ -68,7 +69,7 @@ window.renderCharacterGrid = function() {
         let item = window.classStats[id]; 
         let card = document.createElement("div"); 
         card.className = "char-card"; 
-        card.innerHTML = `<div class="char-avatar"><img src="${item.avatarUrl || 'https://api.dicebear.com/7.x/adventurer/png?seed=error'}"></div><div class="char-name">${item.className || 'Unknown'}</div>`;
+        card.innerHTML = `<div class="char-avatar"><img src="${item.avatarUrl || 'https://api.dicebear.com/7.x/adventurer/png?seed=error'}"></div><div class="char-name">${item.className || 'UNKNOWN'}</div>`;
         
         card.onclick = async () => { 
             if (window.selectedRedClass === id) return;
@@ -76,7 +77,7 @@ window.renderCharacterGrid = function() {
             window.selectedRedClass = id; 
             document.querySelectorAll('.char-card').forEach(c => { c.classList.remove('selected'); c.style.transform = "scale(1)"; }); 
             
-            // 🌟 HIỆU ỨNG THẺ BÀI GIẬT CẤP (IMPACT)
+            // HIỆU ỨNG THẺ BÀI GIẬT CẤP (IMPACT)
             card.classList.add('selected'); 
             card.style.transition = "transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
             card.style.transform = "scale(1.15) rotate(-3deg)";
@@ -84,9 +85,9 @@ window.renderCharacterGrid = function() {
 
             if(typeof window.playSound === 'function') {
                 window.playSound(600, 'square', 0.1, 0.4);
-                setTimeout(() => window.playSound(200, 'triangle', 0.2, 0.6), 50); // Tiếng Echo vi tính
+                setTimeout(() => window.playSound(200, 'triangle', 0.2, 0.6), 50); 
             }
-            window.announce("CHALLENGER ACCEPTS!", 0.9); 
+            window.announce("CHALLENGER ACCEPTS!", 0.85); 
             window.previewGlitchTimer = 35; 
 
             let desc = document.getElementById("desc-red");
@@ -96,14 +97,15 @@ window.renderCharacterGrid = function() {
             window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl;
             window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = activeItem.gloveUrl || 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
 
+            // 🌟 TIẾNG ANH 100% GIAO DIỆN
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:10px; text-align: left; animation: fadeIn 0.3s ease;">
                     <span style="font-size:38px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 15px ${activeItem.color || '#f1c40f'}; letter-spacing: 2px;">${activeItem.className}</span>
                     <div style="height: 2px; background: linear-gradient(90deg, ${activeItem.color || '#f1c40f'}, transparent); width: 80%; margin-bottom: 5px;"></div>
-                    <span style="color:#fff; font-size:18px;">❤️ Sinh Lực: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
-                    <span style="color:#fff; font-size:18px;">💨 Tốc Độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
-                    <span style="color:#fff; font-size:18px;">✨ Sức Mạnh: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
-                    <span style="color:#00f3ff; font-weight: bold; margin-top: 10px; background: rgba(0, 243, 255, 0.1); padding: 5px 10px; border-radius: 5px; border-left: 4px solid #00f3ff; display: inline-block;">🤖 A.I KICKBOXING ENGINE</span>
+                    <span style="color:#fff; font-size:18px;">❤️ HEALTH: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
+                    <span style="color:#fff; font-size:18px;">💨 SPEED: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
+                    <span style="color:#fff; font-size:18px;">✨ POWER: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
+                    <span style="color:#00f3ff; font-weight: bold; margin-top: 10px; background: rgba(0, 243, 255, 0.1); padding: 5px 10px; border-radius: 5px; border-left: 4px solid #00f3ff; display: inline-block;">🤖 AUTONOMOUS A.I COMBAT ENGINE</span>
                 </div>`; 
             
             window.startPreviewLoop(activeItem);
@@ -118,7 +120,7 @@ window.renderCharacterGrid = function() {
 }
 
 // ==========================================
-// 2. CHUYỂN CẢNH KỊCH TÍNH (CINEMATIC VS SCREEN VỚI QUOTES)
+// 2. CHUYỂN CẢNH KỊCH TÍNH (CINEMATIC VS SCREEN VỚI QUOTES ENGLISH)
 // ==========================================
 window.backToMenu = function() { 
     if (typeof window.stopRecording === 'function') window.stopRecording();
@@ -142,8 +144,9 @@ window.startGame = async function() {
     let eChar = window.classStats[randomEnemyId]; 
     let mChar = window.classStats[window.selectedRedClass];
 
-    let pQuotes = ["Ta sẽ nghiền nát ngươi!", "Chuẩn bị vào viện đi!", "Để xem mi trụ được mấy giây?", "Sức mạnh thực sự là đây!"];
-    let eQuotes = ["Đừng hòng chạy thoát!", "Đến đây mà lấy mạng ta!", "Ngươi đùa ta chắc?", "Múa may vớ vẩn!"];
+    // 🌟 QUOTES TIẾNG ANH CỰC NGẦU
+    let pQuotes = ["I will crush you!", "Prepare to bleed!", "Let's see how long you last!", "Behold true power!"];
+    let eQuotes = ["There is no escape!", "Come and get it!", "Are you a joke to me?", "Stop dancing around!"];
     let q1 = pQuotes[Math.floor(Math.random() * pQuotes.length)];
     let q2 = eQuotes[Math.floor(Math.random() * eQuotes.length)];
 
@@ -172,7 +175,7 @@ window.startGame = async function() {
     document.body.appendChild(vsDiv);
     
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
-    window.announce("FIGHT!", 0.9);
+    window.announce("GET READY FOR THE NEXT BATTLE!", 0.9);
 
     setTimeout(async () => {
         vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
@@ -244,8 +247,8 @@ window.matchStartFPS = async function(randomEnemyId) {
     window.enemyFaceImg = new Image(); window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = s2.avatarUrl; 
     window.enemyGloveImg = new Image(); window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = s2.gloveUrl || defaultGlove;
 
-    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + s2.className;
-    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + myChar.className; 
+    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + s2.className.toUpperCase();
+    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + myChar.className.toUpperCase(); 
     let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
@@ -271,6 +274,7 @@ window.startPreviewLoop = function(charStats) {
     
     let pTime = 0;
     let curX = 0, curY = 0;
+    let shakeX = 0, shakeY = 0;
 
     const loop = () => {
         if (!window.isPreviewRunning) return;
@@ -282,6 +286,17 @@ window.startPreviewLoop = function(charStats) {
             
             curX += (window.mouseX * 40 - curX) * 0.1;
             curY += (window.mouseY * 20 - curY) * 0.1;
+
+            // 🌟 SCREEN SHAKE TRONG MENU KHI ĐẤM
+            if (pTime % 180 > 150 && pTime % 180 < 158) {
+                shakeX = (Math.random() - 0.5) * 12;
+                shakeY = (Math.random() - 0.5) * 12;
+                pCtx.globalCompositeOperation = 'screen';
+                pCtx.drawImage(pCanvas, shakeX, 0); // Chromatic Aberration siêu mượt
+                pCtx.globalCompositeOperation = 'source-over';
+            } else { shakeX = 0; shakeY = 0; }
+
+            pCtx.translate(curX + shakeX, curY + shakeY);
 
             // 1. TIA SÁNG GOD RAYS
             pCtx.save();
@@ -302,6 +317,15 @@ window.startPreviewLoop = function(charStats) {
             }
             pCtx.restore();
 
+            // 🌟 1.5 CYBER MATRIX DATA OVERLAY
+            pCtx.fillStyle = `rgba(${window.hexToRgb?window.hexToRgb(charStats.color || '#00f3ff'):'0,243,255'}, 0.15)`;
+            pCtx.font = "14px monospace"; pCtx.textAlign = "center";
+            for(let i=0; i<15; i++) {
+                let textY = ((pTime * 2 + i * 50) % (pCanvas.height + 100)) - 50;
+                let hexStr = Math.random().toString(16).substr(2, 8).toUpperCase();
+                pCtx.fillText(hexStr, 50 + i*120, textY);
+            }
+
             pCtx.translate(curX, curY);
 
             // 2. MẶT SÀN KÍNH
@@ -309,18 +333,17 @@ window.startPreviewLoop = function(charStats) {
             matGrad.addColorStop(0, "#0a0f16"); matGrad.addColorStop(1, "#020305");
             pCtx.fillStyle = matGrad; pCtx.fillRect(-100, pCanvas.height - 100, pCanvas.width + 200, 100);
             
-            pCtx.strokeStyle = "rgba(0, 243, 255, 0.5)"; pCtx.lineWidth = 2;
+            pCtx.strokeStyle = `rgba(${window.hexToRgb?window.hexToRgb(charStats.color || '#00f3ff'):'0,243,255'}, 0.5)`; pCtx.lineWidth = 2;
             pCtx.beginPath(); pCtx.moveTo(-100, pCanvas.height - 100); pCtx.lineTo(pCanvas.width + 100, pCanvas.height - 100); pCtx.stroke();
 
-            // 🌟 3. HỐ ĐEN NĂNG LƯỢNG (VORTEX) DƯỚI CHÂN NHÂN VẬT
+            // 3. HỐ ĐEN NĂNG LƯỢNG
             if (charStats.auraType && charStats.auraType !== 'none') {
                 let aColor = charStats.auraType === 'fire' ? "#ff4757" : (charStats.auraType === 'god' ? "#f1c40f" : "#00f3ff");
                 pCtx.save();
                 pCtx.translate(pCanvas.width/2 - curX*0.5, pCanvas.height - 60);
-                pCtx.scale(1, 0.25); // Ép dẹt thành hình elip 3D
-                pCtx.rotate(pTime * 0.05); // Lốc xoáy quay tròn
+                pCtx.scale(1, 0.25); 
+                pCtx.rotate(pTime * 0.05); 
                 
-                // Vẽ các vòng cung xoáy
                 pCtx.strokeStyle = aColor; pCtx.lineWidth = 3; pCtx.globalAlpha = 0.6;
                 for (let i = 0; i < 4; i++) {
                     pCtx.beginPath();
@@ -328,7 +351,6 @@ window.startPreviewLoop = function(charStats) {
                     pCtx.stroke();
                 }
                 
-                // Lõi phát sáng
                 let coreGrad = pCtx.createRadialGradient(0, 0, 0, 0, 0, 150);
                 coreGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(aColor):'255,255,255'}, 0.8)`);
                 coreGrad.addColorStop(1, "rgba(0,0,0,0)");
@@ -350,18 +372,18 @@ window.startPreviewLoop = function(charStats) {
             
             if(typeof window.drawStickman === 'function') window.drawStickman(pCtx, fakeChar);
             
-            // 🌟 4. HIỆU ỨNG QUÉT LASER (CYBER SCANLINE) LÊN NHÂN VẬT
-            if (pTime % 300 < 100) { // Thỉnh thoảng quét 1 lần
-                let scanY = -200 + ((pTime % 300) / 100) * 300; // Quét từ đầu xuống chân
+            // 4. QUÉT LASER
+            if (pTime % 300 < 100) { 
+                let scanY = -200 + ((pTime % 300) / 100) * 300; 
                 pCtx.fillStyle = `rgba(${window.hexToRgb?window.hexToRgb(charStats.color || '#00f3ff'):'0,243,255'}, 0.8)`;
                 pCtx.shadowBlur = 15; pCtx.shadowColor = charStats.color || "#00f3ff";
-                pCtx.fillRect(-50, scanY, 100, 2); // Tia laser mỏng
+                pCtx.fillRect(-50, scanY, 100, 2); 
                 pCtx.shadowBlur = 0;
             }
 
             pCtx.restore();
 
-            // 🌟 5. BỤI LƠ LỬNG
+            // 5. BỤI LƠ LỬNG
             pCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
             window.menuDustParticles.forEach(d => {
                 d.x += d.vx - (window.mouseX * d.size); 
@@ -375,7 +397,7 @@ window.startPreviewLoop = function(charStats) {
             });
             pCtx.globalAlpha = 1.0;
 
-            // 🌟 6. HOLOGRAM GLITCH KHI CHỌN TƯỚNG
+            // 6. HOLOGRAM GLITCH KHI CHỌN TƯỚNG
             if (window.previewGlitchTimer > 0) {
                 window.previewGlitchTimer--;
                 let gPower = window.previewGlitchTimer; 
