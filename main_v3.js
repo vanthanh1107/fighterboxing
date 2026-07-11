@@ -1,5 +1,5 @@
 // ==========================================
-// MAIN.JS - THE DEFINITIVE ARCADE (V45.1 - PERFECT SHOWCASE FIX)
+// MAIN.JS - THE DEFINITIVE ARCADE (V45.2 - PERFECT ANTI-FREEZE FIX)
 // [ĐỈNH CAO: FULL MAPS, CINEMATIC VS IN-FRAME, 3D PARALLAX MENU, 100% ENGLISH]
 // ==========================================
 
@@ -152,34 +152,40 @@ window.startGame = async function() {
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
     let game = document.getElementById("game-screen"); 
     
-    // FIX LỖI TREO GAME: Không dùng overflow: hidden trên #game-screen nữa để tránh làm mất canvas
+    let originalPosition = 'static';
+
     if(game) {
         game.style.display = "block"; 
-        if (window.getComputedStyle(game).position === 'static') {
-            game.style.position = "relative"; 
+        // Lưu lại CSS hiện tại để không làm vỡ game khi trả lại
+        originalPosition = window.getComputedStyle(game).position;
+        if (originalPosition === 'static') {
+            game.style.position = 'relative';
         }
     }
 
-    // MÀN HÌNH VS SCREEN IN-FRAME (CHỈ NẰM TRONG Ô GAME)
+    let mName = mChar && mChar.className ? mChar.className.toUpperCase() : 'UNKNOWN';
+    let eName = eChar && eChar.className ? eChar.className.toUpperCase() : 'UNKNOWN';
+
+    // MÀN HÌNH VS SCREEN IN-FRAME
     let vsDiv = document.createElement("div");
     vsDiv.id = "vs-screen-overlay";
     
-    // vsDiv tự có overflow: hidden để cắt thẻ chéo, không làm ảnh hưởng đến game
-    vsDiv.style.cssText = `position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 99999; background: #000; display: flex; overflow: hidden; border-radius: inherit; box-shadow: inset 0 0 50px rgba(0,0,0,0.8);`;
+    // Đã bổ sung pointer-events: none (xuyên thấu click) để chống lỗi treo cứng game
+    vsDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: #000; display: flex; overflow: hidden; pointer-events: none; box-shadow: inset 0 0 50px rgba(0,0,0,0.8);`;
     
     vsDiv.innerHTML = `
         <div style="flex:1; background: ${mChar.color || '#00f3ff'}; transform: skewX(-15deg) scale(1.3); display: flex; flex-direction: column; justify-content: center; align-items: flex-end; padding-right: 15%; animation: slideRight 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: clamp(30px, 6vw, 70px); font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8); margin: 0;">${mChar.className.toUpperCase()}</h1>
+            <h1 style="color: #fff; font-size: clamp(30px, 6vw, 70px); font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8); margin: 0;">${mName}</h1>
             <p style="color: #f1c40f; font-size: clamp(14px, 2.5vw, 24px); font-family: Arial; font-weight: 900; font-style: italic; transform: skewX(15deg); text-shadow: 2px 2px 0 #000; margin: 0; overflow: hidden; white-space: nowrap; animation: typing 1s steps(30, end) forwards; animation-delay: 0.3s; opacity: 0; animation-fill-mode: forwards;">"${q1}"</p>
         </div>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
             <h1 style="color: #fff; font-size: clamp(40px, 10vw, 100px); font-family: 'Impact'; font-style: italic; text-shadow: 0 0 30px #000, 0 0 10px #fff; animation: pulse 0.4s infinite alternate;">VS</h1>
         </div>
         <div style="flex:1; background: ${eChar.color || '#ff003c'}; transform: skewX(-15deg) scale(1.3); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding-left: 15%; animation: slideLeft 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: clamp(30px, 6vw, 70px); font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8); margin: 0;">${eChar.className.toUpperCase()}</h1>
+            <h1 style="color: #fff; font-size: clamp(30px, 6vw, 70px); font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8); margin: 0;">${eName}</h1>
             <p style="color: #fff; font-size: clamp(14px, 2.5vw, 24px); font-family: Arial; font-weight: 900; font-style: italic; transform: skewX(15deg); text-shadow: 2px 2px 0 #000; margin: 0; overflow: hidden; white-space: nowrap; animation: typing 1s steps(30, end) forwards; animation-delay: 0.6s; opacity: 0; animation-fill-mode: forwards;">"${q2}"</p>
         </div>
-        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px); pointer-events: none; z-index: 20;"></div>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px); z-index: 20;"></div>
         <style>
             @keyframes slideRight { from { transform: skewX(-15deg) scale(1.3) translateX(-100%); } to { transform: skewX(-15deg) scale(1.3) translateX(0); } }
             @keyframes slideLeft { from { transform: skewX(-15deg) scale(1.3) translateX(100%); } to { transform: skewX(-15deg) scale(1.3) translateX(0); } }
@@ -205,14 +211,25 @@ window.startGame = async function() {
     
     if (!window.isLoopRunning) { 
         window.isLoopRunning = true; 
-        // Gọi Game Loop để bắt đầu khởi chạy game ở phía dưới
         requestAnimationFrame(window.gameLoopFPS); 
     } 
 
-    setTimeout(async () => {
-        // Sau 2.2s bắt đầu mờ khung giới thiệu
-        vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
-        setTimeout(() => vsDiv.remove(), 300);
+    setTimeout(() => {
+        if(vsDiv) {
+            vsDiv.style.opacity = 0; 
+            vsDiv.style.transition = "opacity 0.3s";
+            
+            // Xóa triệt để khỏi DOM để đảm bảo Game Loop vẽ lại bình thường
+            setTimeout(() => {
+                if (vsDiv.parentNode) {
+                    vsDiv.parentNode.removeChild(vsDiv);
+                }
+                // Trả về CSS ban đầu của thẻ game để không làm sập layout game gốc
+                if(game && originalPosition === 'static') {
+                    game.style.position = originalPosition;
+                }
+            }, 300);
+        }
     }, 2200);
 }
 
