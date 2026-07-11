@@ -517,4 +517,3 @@ window.draw = function() {
 window.hexToRgb = function(hex) { let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : "255, 255, 255"; }
 window.gameLoopFPS = function(timestamp) { if (!window.isLoopRunning) return; requestAnimationFrame(window.gameLoopFPS); if (!timestamp) timestamp = 0; let deltaTime = timestamp - window.lastFrameTime; if (deltaTime >= window.FRAME_MIN_TIME) { window.lastFrameTime = timestamp - (deltaTime % window.FRAME_MIN_TIME); try { window.update(); } catch(e) {} try { window.draw(); } catch(e) {} } }
 
-nâng cấp thêm và thay các câu thoại thành tiếng anh thật ngầu cho game giúp mình
