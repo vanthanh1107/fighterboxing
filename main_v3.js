@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - BROADCAST ESPORTS EDITION (V35.0 - THE SHOWCASE)
-// [ĐỈNH CAO: BÌNH LUẬN VIÊN A.I, MÀN HÌNH VS TRANSITION, MENU 3D PARALLAX]
+// MAIN.JS - THE DIRECTOR'S CUT EDITION (V36.0 - CINEMATIC MENU)
+// [ĐỈNH CAO: TIA SÁNG GOD-RAYS, HOLOGRAM GLITCH, VS QUOTES, BỤI LƠ LỬNG]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -16,16 +16,29 @@ window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBl
 window.enemyFaceImg = new Image(); 
 window.enemyGloveImg = new Image(); 
 
-// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I (ANNOUNCER VOICE)
+// 🌟 HỆ THỐNG BIẾN MENU 3D
+window.previewGlitchTimer = 0; // Biến hiệu ứng nhiễu sóng khi chọn tướng
+window.menuDustParticles = []; // Hạt bụi lơ lửng
+
+// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I
 window.announce = function(text, pitch = 0.8) {
     try {
         if (window.isMuted) return;
-        speechSynthesis.cancel(); // Ngắt câu cũ để hô câu mới cho gắt
+        speechSynthesis.cancel(); 
         let msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'en-US'; msg.rate = 1.3; msg.pitch = pitch; msg.volume = 0.9;
         speechSynthesis.speak(msg);
     } catch(e) {}
 };
+
+// Khởi tạo hạt bụi cho Menu
+for(let i=0; i<40; i++) {
+    window.menuDustParticles.push({
+        x: Math.random() * 2000 - 1000, y: Math.random() * 1000,
+        vx: (Math.random() - 0.5) * 0.5, vy: -Math.random() * 1.5,
+        size: Math.random() * 2.5 + 0.5, alpha: Math.random() * 0.5 + 0.1
+    });
+}
 
 // ==========================================
 // 1. KHỞI TẠO VÀ CHỌN TƯỚNG TẠI MENU
@@ -61,12 +74,17 @@ window.renderCharacterGrid = function() {
         card.innerHTML = `<div class="char-avatar"><img src="${item.avatarUrl || 'https://api.dicebear.com/7.x/adventurer/png?seed=error'}"></div><div class="char-name">${item.className || 'Unknown'}</div>`;
         
         card.onclick = async () => { 
+            // Nếu click lại đúng tướng đang chọn thì thôi
+            if (window.selectedRedClass === id) return;
+
             window.selectedRedClass = id; 
             document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected')); 
             card.classList.add('selected'); 
             
-            if(typeof window.playSound === 'function') window.playSound(600, 'square', 0.1, 0.4);
-            
+            if(typeof window.playSound === 'function') window.playSound(400, 'square', 0.2, 0.5);
+            window.announce("A NEW CHALLENGER!", 1.1); // Hô to khi chọn tướng
+            window.previewGlitchTimer = 35; // 🌟 KÍCH HOẠT HOLOGRAM GLITCH KHI ĐỔI TƯỚNG
+
             let desc = document.getElementById("desc-red");
             await window.loadCharacterDynamic(id);
             let activeItem = window.classStats[id];
@@ -80,11 +98,11 @@ window.renderCharacterGrid = function() {
 
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:10px; text-align: left; animation: fadeIn 0.3s ease;">
-                    <span style="font-size:32px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 10px ${activeItem.color || '#f1c40f'};">${activeItem.className}</span>
+                    <span style="font-size:35px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 15px ${activeItem.color || '#f1c40f'}; letter-spacing: 2px;">${activeItem.className}</span>
                     <span style="color:#fff; font-size:18px;">❤️ Sinh Lực: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
                     <span style="color:#fff; font-size:18px;">💨 Tốc Độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
                     <span style="color:#fff; font-size:18px;">✨ Sức Mạnh: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
-                    <span style="color:#00f3ff; font-weight: bold; margin-top: 10px; background: rgba(0, 243, 255, 0.1); padding: 5px 10px; border-radius: 5px; border-left: 4px solid #00f3ff;">🤖 AI AUTO-BATTLER READY</span>
+                    <span style="color:#00f3ff; font-weight: bold; margin-top: 10px; background: rgba(0, 243, 255, 0.1); padding: 5px 10px; border-radius: 5px; border-left: 4px solid #00f3ff; display: inline-block;">🤖 A.I KICKBOXING ENGINE</span>
                 </div>`; 
             
             window.startPreviewLoop(activeItem);
@@ -99,14 +117,17 @@ window.renderCharacterGrid = function() {
 }
 
 // ==========================================
-// 2. CHUYỂN CẢNH KỊCH TÍNH (CINEMATIC VS SCREEN)
+// 2. CHUYỂN CẢNH KỊCH TÍNH (CINEMATIC VS SCREEN VỚI QUOTES)
 // ==========================================
 window.backToMenu = function() { 
     if (typeof window.stopRecording === 'function') window.stopRecording();
     let game = document.getElementById("game-screen"); if(game) game.style.display = "none"; 
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "block"; 
     window.gameOver = true; window.isLoopRunning = false; 
-    if(window.selectedRedClass && window.classStats) window.startPreviewLoop(window.classStats[window.selectedRedClass]);
+    if(window.selectedRedClass && window.classStats) {
+        window.previewGlitchTimer = 35; // Glitch lại khi từ trận quay ra
+        window.startPreviewLoop(window.classStats[window.selectedRedClass]);
+    }
 }
 
 window.startGame = async function() { 
@@ -121,33 +142,41 @@ window.startGame = async function() {
     let eChar = window.classStats[randomEnemyId]; 
     let mChar = window.classStats[window.selectedRedClass];
 
-    // 🌟 MÀN HÌNH VS SCREEN OVERLAY
+    // 🌟 KHO THOẠI TRƯỚC TRẬN ĐẤU (PRE-MATCH QUOTES)
+    let pQuotes = ["Ta sẽ nghiền nát ngươi!", "Chuẩn bị vào viện đi!", "Để xem mi trụ được mấy giây?", "Sức mạnh thực sự là đây!"];
+    let eQuotes = ["Đừng hòng chạy thoát!", "Đến đây mà lấy mạng ta!", "Ngươi đùa ta chắc?", "Múa may vớ vẩn!"];
+    let q1 = pQuotes[Math.floor(Math.random() * pQuotes.length)];
+    let q2 = eQuotes[Math.floor(Math.random() * eQuotes.length)];
+
+    // 🌟 MÀN HÌNH VS SCREEN OVERLAY CÓ PHỤ ĐỀ
     let vsDiv = document.createElement("div");
     vsDiv.id = "vs-screen-overlay";
     vsDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: #000; display: flex; overflow: hidden;`;
     vsDiv.innerHTML = `
-        <div style="flex:1; background: ${mChar.color || '#00f3ff'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-end; align-items: center; padding-right: 15%; animation: slideRight 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: 80px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${mChar.className.toUpperCase()}</h1>
+        <div style="flex:1; background: ${mChar.color || '#00f3ff'}; transform: skewX(-15deg) scale(1.2); display: flex; flex-direction: column; justify-content: center; align-items: flex-end; padding-right: 15%; animation: slideRight 0.4s ease forwards;">
+            <h1 style="color: #fff; font-size: 90px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8); margin: 0;">${mChar.className.toUpperCase()}</h1>
+            <p style="color: #f1c40f; font-size: 26px; font-family: Arial; font-weight: 900; font-style: italic; transform: skewX(15deg); text-shadow: 2px 2px 0 #000; margin: 0; overflow: hidden; white-space: nowrap; animation: typing 1s steps(30, end) forwards; animation-delay: 0.3s; opacity: 0; animation-fill-mode: forwards;">"${q1}"</p>
         </div>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-            <h1 style="color: #fff; font-size: 120px; font-family: 'Impact'; font-style: italic; text-shadow: 0 0 30px #000; animation: pulse 0.5s infinite alternate;">VS</h1>
+            <h1 style="color: #fff; font-size: 130px; font-family: 'Impact'; font-style: italic; text-shadow: 0 0 40px #000, 0 0 10px #fff; animation: pulse 0.4s infinite alternate;">VS</h1>
         </div>
-        <div style="flex:1; background: ${eChar.color || '#ff003c'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-start; align-items: center; padding-left: 15%; animation: slideLeft 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: 80px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${eChar.className.toUpperCase()}</h1>
+        <div style="flex:1; background: ${eChar.color || '#ff003c'}; transform: skewX(-15deg) scale(1.2); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding-left: 15%; animation: slideLeft 0.4s ease forwards;">
+            <h1 style="color: #fff; font-size: 90px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8); margin: 0;">${eChar.className.toUpperCase()}</h1>
+            <p style="color: #fff; font-size: 26px; font-family: Arial; font-weight: 900; font-style: italic; transform: skewX(15deg); text-shadow: 2px 2px 0 #000; margin: 0; overflow: hidden; white-space: nowrap; animation: typing 1s steps(30, end) forwards; animation-delay: 0.6s; opacity: 0; animation-fill-mode: forwards;">"${q2}"</p>
         </div>
         <style>
             @keyframes slideRight { from { transform: skewX(-15deg) scale(1.2) translateX(-100%); } to { transform: skewX(-15deg) scale(1.2) translateX(0); } }
             @keyframes slideLeft { from { transform: skewX(-15deg) scale(1.2) translateX(100%); } to { transform: skewX(-15deg) scale(1.2) translateX(0); } }
-            @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.2); } }
+            @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.15); } }
+            @keyframes typing { from { width: 0; opacity: 1; } to { width: 100%; opacity: 1; } }
         </style>
     `;
     document.body.appendChild(vsDiv);
     
-    // Hiệu ứng âm thanh Hype
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
-    window.announce("Get Ready for the Next Battle!", 0.9);
+    window.announce("FIGHT!", 0.9);
 
-    // Chờ 1.5 giây rồi xóa VS Screen và vào trận
+    // Chờ 2.2 giây để khán giả đọc kịp câu thoại rồi mới vào trận
     setTimeout(async () => {
         vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
         setTimeout(() => vsDiv.remove(), 300);
@@ -159,13 +188,13 @@ window.startGame = async function() {
         window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
         window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
 
-        await window.matchStartFPS(randomEnemyId); // Truyền ID đã random vào
+        await window.matchStartFPS(randomEnemyId); 
         
         if (!window.isLoopRunning) { 
             window.isLoopRunning = true; 
             requestAnimationFrame(window.gameLoopFPS); 
         } 
-    }, 1500);
+    }, 2200);
 }
 
 window.matchStartFPS = async function(randomEnemyId) {
@@ -176,10 +205,10 @@ window.matchStartFPS = async function(randomEnemyId) {
     window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, rage: 0, combo: 0, isDodging: false, isBlocking: false, attackCooldown: 0, parryInvuln: 0, guardBreakTimer: 0, clutchUsed: false, clutchActive: false };
     
     window.floatingTexts = []; window.particles = []; window.shockwaves = []; window.screenBlood = []; 
-    window.bloodPools = []; window.floorSplatters = []; window.glassShards = []; window.debris = [];
+    window.bloodPools = []; window.floorSplatters = []; window.glassShards = []; window.debris = []; window.speechBubbles = [];
     window.damageFlashAlpha = 0; window.perfectDodgeFlash = 0; window.hitZoomTimer = 0; 
     window.clutchFlashTimer = 0; window.fatalBlowFlash = 0; window.blackoutTimer = 0; window.parryShieldRadius = 0;
-    window.speedLinesAlpha = 0; window.heartbeatPhase = 0; window.whiteFlashAlpha = 0; window.clashStruggleTimer = 0; window.destructiveFinishTimer = 0;
+    window.speedLinesAlpha = 0; window.heartbeatPhase = 0; window.whiteFlashAlpha = 0; window.clashStruggleTimer = 0; window.destructiveFinishTimer = 0; window.superArtTimer = 0;
 
     let crack = document.getElementById("screen-crack"); if(crack) crack.style.opacity = 0;
     
@@ -223,142 +252,8 @@ window.matchStartFPS = async function(randomEnemyId) {
     let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
-    setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); // Announce FIGHT khi chữ FIGHT hiện lên
-
     if (typeof window.startRecording === 'function') window.startRecording();
 }
-
-// ==========================================
-// 3. ĐỒNG BỘ ACTION VỚI LÕI VẬT LÝ HỦY DIỆT
-// ==========================================
-
-window.moveFPS = function(dir) {
-    if (window.playerFPS.stamina < 5 || window.gameOver || window.playerFPS.isDodging || window.playerFPS.guardBreakTimer > 0 || window.clashStruggleTimer > 0) return;
-    window.playerFPS.stamina -= 5; window.targetZ += dir * 45; window.targetZ = Math.max(30, Math.min(220, window.targetZ)); 
-    window.playerFPS.moveTimer = 25; window.playSound(200, 'sine', 0.1, 0.2);
-};
-
-window.punch = function(hand) {
-    if (window.playerFPS.attackCooldown > 0 || window.gameOver || window.playerFPS.isBlocking || window.playerFPS.guardBreakTimer > 0 || window.clashStruggleTimer > 0) return;
-    window.playerFPS.attackCooldown = 15; window.playerFPS.stamina -= 10; 
-    if (window.playerFPS.rage === undefined) window.playerFPS.rage = 0; if (window.playerFPS.combo === undefined) window.playerFPS.combo = 0; 
-
-    let glove = document.getElementById(hand + "-glove");
-    if(glove) { glove.classList.add(`glove-punch-${hand}`); setTimeout(() => glove.classList.remove(`glove-punch-${hand}`), 150); }
-
-    let e = window.enemies[0];
-    if (e && e.hp > 0 && window.enemyZ <= 90) { 
-        let isPerfectCounter = window.playerFPS.perfectDodgeBuff; window.playerFPS.perfectDodgeBuff = false; 
-
-        if (e.attackTimer > 5 && e.attackTimer < 18 && !isPerfectCounter && window.playerFPS.rage < 100) {
-            window.clashStruggleTimer = 45; e.attackTimer = 0; window.playerFPS.attackCooldown = 45; window.whiteFlashAlpha = 0.8; 
-            window.targetZ += 50; window.enemyZ += 30; window.cameraTilt = (Math.random() > 0.5 ? 0.3 : -0.3); 
-            window.shakeScreen(45, 30); window.playSound(100, 'square', 0.8, 1.0, true);
-            window.hitZoomTimer = 45; window.fatalBlowFlash = 6; 
-            if(window.shockwaves) window.shockwaves.push({ x: 400, y: 300, radius: 20, maxRadius: 600, alpha: 1, speed: 20, thickness: 15, color: "#fff" });
-            if(window.spawnDamageNumber) window.spawnDamageNumber(400, 200, "⚔️ POWER STRUGGLE! ⚔️", "#ffffff", true);
-            window.spawnParticles(400, 150, "#f1c40f", true);
-            if(window.spawnDebris) window.spawnDebris(400, window.GROUND_Y, 20);
-            return; 
-        }
-
-        if (e.attackTimer <= 0 && e.hitStun <= 0 && (!e.dodgeTimer || e.dodgeTimer <= 0) && window.playerFPS.rage < 100 && !isPerfectCounter) {
-            let defenseRoll = Math.random();
-            if (defenseRoll < 0.25) { 
-                window.playerFPS.combo = 0; window.playerFPS.stamina -= 15; window.floatingTexts.push({ x: e.x, y: 150, text: "💨 SLIP!", color: "#bdc3c7", alpha: 1, vx: 0, vy: -2, font: "italic 900 30px Arial", life: 30 });
-                e.dodgeDir = Math.random() > 0.5 ? 1 : -1; e.dodgeTimer = 35; e.baseTargetX = e.x; 
-                if (Math.random() < 0.70) { setTimeout(() => { if (e.hp > 0 && !window.gameOver && e.guardBreakTimer <= 0) { e.state = ['hook', 'uppercut'][Math.floor(Math.random()*2)]; e.attackTimer = 20; window.targetZ -= 25; window.floatingTexts.push({ x: e.x, y: 180, text: "⚡ COUNTER!", color: "#ff4757", alpha: 1, vx: 0, vy: -2, font: "italic 900 28px Arial", life: 30 }); } }, 150); } return; 
-            } else if (defenseRoll < 0.55) { 
-                window.playerFPS.combo = 0; window.playSound(600, 'triangle', 0.2, 0.4, true); window.targetZ += 8; e.hp -= 2; window.playerFPS.rage += 5; 
-                e.guardHealth = (e.guardHealth || 100) - 35; 
-                if (e.guardHealth <= 0) { e.guardBreakTimer = 60; e.guardHealth = 100; window.hitZoomTimer = 15; window.whiteFlashAlpha = 0.6; if(window.spawnDamageNumber) window.spawnDamageNumber(e.x, 150, "💔 GUARD BREAK!", "#ff9f43", true); window.shakeScreen(15, 10); window.announce("Guard Broken!"); } 
-                else { window.floatingTexts.push({ x: e.x, y: 150, text: "🛡️ BLOCK!", color: "#3498db", alpha: 1, vx: 0, vy: -1, font: "900 30px Arial", life: 30 }); }
-                return; 
-            }
-        }
-
-        window.playerFPS.combo++; let comboMult = 1 + (window.playerFPS.combo * 0.15); 
-        let isRagePunch = window.playerFPS.rage >= 100; let isCrit = Math.random() < 0.25 || isRagePunch || isPerfectCounter; 
-        let dmg = 40 * comboMult; let punchColor = window.playerFPS.combo >= 4 ? "#ff9f43" : "#fff";
-
-        if (isRagePunch) { 
-            dmg = 150 * comboMult; window.playerFPS.rage = 0; punchColor = "#f1c40f"; 
-            window.targetZ += 60; window.enemyZ += 40; e.targetLean = (Math.random() - 0.5) * 0.8; 
-            window.hitZoomTimer = 40; window.speedLinesAlpha = 1.0; window.blackoutTimer = 25; window.cameraTilt = (Math.random() > 0.5 ? 0.3 : -0.3); 
-            if(window.spawnDamageNumber) window.spawnDamageNumber(400, 180, "🔥 MEGA SMASH! 🔥", "#f1c40f", true); 
-            window.playSound(180, 'sawtooth', 0.6, 0.8, true); if(window.shockwaves) window.shockwaves.push({ x: 400, y: 300, radius: 30, maxRadius: 1000, alpha: 1, speed: 30, thickness: 35, color: "#f1c40f" }); 
-            if(window.spawnDebris) window.spawnDebris(e.x, window.GROUND_Y, 40); 
-            window.announce("Ultimate Smash!", 0.7); // B.L.V hô to
-        } 
-        else if (isPerfectCounter) { dmg = 100 * comboMult; punchColor = "#00f3ff"; window.targetZ += 30; window.hitZoomTimer = 15; window.whiteFlashAlpha = 0.6; window.cameraTilt = 0.15; if(window.spawnDamageNumber) window.spawnDamageNumber(400, 180, "⚔️ TRỪNG PHẠT! ⚔️", "#00f3ff", true); } 
-        else { window.playerFPS.rage = Math.min(100, window.playerFPS.rage + 15); if (isCrit) { dmg = Math.floor(dmg * 1.8); punchColor = "#ff4757"; window.hitZoomTimer = 10; window.whiteFlashAlpha = 0.4; window.cameraTilt = (Math.random() > 0.5 ? 0.1 : -0.1); } }
-
-        if (window.playerFPS.clutchActive) dmg = Math.floor(dmg * 1.4);
-        window.targetZ += (isCrit ? 30 : 10); 
-        if (window.targetZ >= 200 && !isRagePunch) { window.targetZ -= 80; e.vy = -6; e.hitStun += 35; dmg = Math.floor(dmg * 1.5); if(window.spawnDamageNumber) window.spawnDamageNumber(e.x, 130, "💢 BẬT DÂY ĐÀI!", "#ff4d4d", true); window.shakeScreen(25, 20); window.playSound(250, 'triangle', 0.4, 0.8, true); }
-
-        e.hp -= dmg;
-        if (isCrit || isRagePunch) { if(window.floorSplatters) window.floorSplatters.push({ x: e.x + (Math.random()-0.5)*150, z: window.enemyZ + (Math.random()-0.5)*50, size: 5 + Math.random()*15, color: "rgba(180, 0, 0, 0.6)" }); }
-
-        if (e.hp <= 0) {
-            if (!window.handleAnimeComeback || !window.handleAnimeComeback(e, false)) { 
-                if(window.triggerFatality) window.triggerFatality(e, isRagePunch); 
-                window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, "rgba(220, 0, 0, 0.9)", true); 
-                if(window.spawnScreenBlood) window.spawnScreenBlood(); 
-                window.announce("K.O!", 0.6); // Bình luận viên tuyên bố chiến thắng
-            }
-        } else {
-            if (isCrit || isRagePunch || isPerfectCounter) { e.state = 'hurt'; e.hitStun = isRagePunch ? 45 : 25; e.attackTimer = 0; e.guardBreakTimer = 0; if (isCrit && window.spawnScreenBlood) window.spawnScreenBlood(); } else { if (e.attackTimer <= 0) { e.state = 'hurt'; e.hitStun = 10; } }
-            let hitStopDuration = isRagePunch ? 180 : (isCrit || isPerfectCounter ? 80 : 0);
-            if (hitStopDuration > 0) { window.isLoopRunning = false; setTimeout(() => { if(!window.gameOver) { window.isLoopRunning = true; requestAnimationFrame(window.gameLoopFPS); } }, hitStopDuration); }
-            window.shakeScreen(isCrit ? 22 : 8, isCrit ? 15 : 5); window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, punchColor, isCrit);
-            
-            if (window.playerFPS.combo > 1 && window.spawnDamageNumber) {
-                let comboRank = "NICE!"; let fontSize = 35;
-                if (window.playerFPS.combo === 3) { comboRank = "🔥 AWESOME!"; fontSize = 42; window.announce("Awesome!"); }
-                if (window.playerFPS.combo === 5) { comboRank = "⚡ UNSTOPPABLE!"; fontSize = 50; punchColor = "#00f3ff"; window.announce("Unstoppable!"); }
-                if (window.playerFPS.combo === 7) { comboRank = "👑 GODLIKE!!!"; fontSize = 65; punchColor = "#f1c40f"; window.shakeScreen(8, 8); window.announce("Godlike!", 0.7); }
-                window.spawnDamageNumber(250 + Math.random()*20, 250 + Math.random()*20, `${comboRank} (x${window.playerFPS.combo})`, punchColor, window.playerFPS.combo >= 5);
-            }
-            if(window.spawnDamageNumber) window.spawnDamageNumber(e.x + (Math.random()*40-20), e.y - 120, isRagePunch ? `💥💥 -${Math.floor(dmg)}` : (isCrit ? `💥 -${Math.floor(dmg)}` : `-${Math.floor(dmg)}`), punchColor, isCrit);
-        }
-    } else { window.playerFPS.combo = 0; window.playerFPS.stamina -= 12; window.floatingTexts.push({ x: window.canvas.width/2 + (hand==='left'? -80:80), y: window.canvas.height/2, text: "MISS!", color: "#7f8c8d", alpha: 1, vx: 0, vy: -1, font: "bold 25px Arial", life: 25 }); }
-};
-
-window.blockFPS = function() { 
-    if (window.playerFPS.stamina <= 0 || window.gameOver || window.playerFPS.guardBreakTimer > 0 || window.clashStruggleTimer > 0) return; 
-
-    let e = window.enemies[0]; let isParry = (e && e.attackTimer > 5 && e.attackTimer < 18);
-    window.playerFPS.isBlocking = true; document.getElementById("left-glove").classList.add("glove-block-left"); document.getElementById("right-glove").classList.add("glove-block-right"); 
-
-    if (isParry) {
-        window.playSound(700, 'triangle', 0.4, 0.9, true); window.shakeScreen(20, 15); window.whiteFlashAlpha = 0.8; window.hitZoomTimer = 15;
-        window.playerFPS.rage = Math.min(100, window.playerFPS.rage + 25); 
-        window.parryShieldRadius = 150; 
-        if(window.spawnDamageNumber) window.spawnDamageNumber(400, window.canvas.height/2 + 50, "🛡️ PERFECT PARRY! 🛡️", "#f1c40f", true);
-        window.spawnParticles(400, 300, "#f1c40f", true); if(window.shockwaves) window.shockwaves.push({ x: 400, y: 300, radius: 10, maxRadius: 400, alpha: 1, speed: 20, thickness: 10, color: "#f1c40f" });
-        e.attackTimer = 0; e.hitStun = 30; window.playerFPS.parryInvuln = 10; 
-        window.announce("Perfect!", 1.2);
-    }
-
-    const releaseBlock = () => { window.playerFPS.isBlocking = false; document.getElementById("left-glove").classList.remove("glove-block-left"); document.getElementById("right-glove").classList.remove("glove-block-right"); document.removeEventListener('mouseup', releaseBlock); document.removeEventListener('touchend', releaseBlock); }; 
-    document.addEventListener('mouseup', releaseBlock); document.addEventListener('touchend', releaseBlock); 
-};
-
-window.dodgeFPS = function() { 
-    if (window.playerFPS.stamina < 20 || window.playerFPS.isDodging || window.gameOver || window.playerFPS.guardBreakTimer > 0 || window.clashStruggleTimer > 0) return; 
-    let e = window.enemies[0]; let isPerfect = (e && e.attackTimer > 5 && e.attackTimer < 20); 
-    window.playerFPS.isDodging = true; window.playerFPS.iFrames = isPerfect ? 50 : 30; window.playerFPS.stamina -= (isPerfect ? 0 : 20); window.playerFPS.dodgeDir = Math.random() > 0.5 ? 1 : -1; window.playerFPS.dodgeTimer = isPerfect ? 45 : 35; 
-    if (isPerfect) { 
-        window.perfectDodgeFlash = 1.0; window.speedLinesAlpha = 1.0; window.playerFPS.perfectDodgeBuff = true; window.playSound(800, 'sine', 0.5, 0.6); 
-        if(window.spawnDamageNumber) window.spawnDamageNumber(400, window.canvas.height/2 + 80, "⚡ MATRIX DODGE! ⚡", "#00f3ff", true); 
-        window.camZoom = 1.25; window.cameraTilt = window.playerFPS.dodgeDir * 0.4;
-        e.attackTimer = 0; e.state = 'idle'; e.hitStun = 40; 
-        window.announce("Dodge!", 1.5);
-        window.isLoopRunning = false; setTimeout(() => { if(!window.gameOver) { window.isLoopRunning = true; requestAnimationFrame(window.gameLoopFPS); } }, 300);
-        setTimeout(() => { let counterHand = window.playerFPS.dodgeDir === 1 ? 'right' : 'left'; window.punch(counterHand); }, 450); 
-    } else { window.playSound(200, 'sine', 0.2, 0.4); if (Math.random() < 0.75) { setTimeout(() => { let counterHand = window.playerFPS.dodgeDir === 1 ? 'right' : 'left'; window.punch(counterHand); }, 180); } } setTimeout(() => { window.playerFPS.isDodging = false; }, isPerfect ? 600 : 400); 
-};
 
 // ==========================================
 // 4. HIỂN THỊ ANIMATION NHÂN VẬT CHỜ (LIVE 3D PARALLAX SHOWCASE)
@@ -366,9 +261,8 @@ window.dodgeFPS = function() {
 window.previewAnimId = null;
 window.mouseX = 0; window.mouseY = 0;
 
-// Bắt sự kiện chuột để tạo góc nhìn 3D (Parallax)
 document.addEventListener('mousemove', (e) => {
-    window.mouseX = (e.clientX / window.innerWidth) * 2 - 1; // Giá trị từ -1 đến 1
+    window.mouseX = (e.clientX / window.innerWidth) * 2 - 1; 
     window.mouseY = (e.clientY / window.innerHeight) * 2 - 1;
 });
 
@@ -387,26 +281,45 @@ window.startPreviewLoop = function(charStats) {
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
             pCtx.save();
             
-            // Lấy tọa độ 3D Parallax mượt mà (Lerp)
-            curX += (window.mouseX * 30 - curX) * 0.1;
-            curY += (window.mouseY * 15 - curY) * 0.1;
+            // Lấy tọa độ 3D Parallax mượt mà
+            curX += (window.mouseX * 40 - curX) * 0.1;
+            curY += (window.mouseY * 20 - curY) * 0.1;
 
-            // Dời toàn bộ khung cảnh theo chuột
+            // 🌟 1. VẼ TIA SÁNG THẦN THÁNH (GOD RAYS) PHÍA SAU
+            pCtx.save();
+            pCtx.translate(pCanvas.width/2 - curX*0.2, -100); // Nguồn sáng trên cùng hơi nhích theo góc nhìn
+            let rayGrad = pCtx.createLinearGradient(0, 0, 0, pCanvas.height + 200);
+            rayGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(charStats.color || '#fff'):'255,255,255'}, 0.25)`);
+            rayGrad.addColorStop(1, "rgba(0,0,0,0)");
+            pCtx.fillStyle = rayGrad;
+            
+            // Vẽ 3 dải luồng sáng dao động
+            for(let r=0; r<3; r++) {
+                let angBase = (r - 1) * 0.4; // Tỏa ra 3 hướng
+                let sway = Math.sin(pTime*0.01 + r) * 0.15; // Ánh sáng đung đưa
+                pCtx.beginPath();
+                pCtx.moveTo(0, 0);
+                pCtx.lineTo(Math.cos(Math.PI/2 + angBase + sway - 0.2) * 1500, Math.sin(Math.PI/2 + angBase + sway - 0.2) * 1500);
+                pCtx.lineTo(Math.cos(Math.PI/2 + angBase + sway + 0.2) * 1500, Math.sin(Math.PI/2 + angBase + sway + 0.2) * 1500);
+                pCtx.closePath();
+                pCtx.fill();
+            }
+            pCtx.restore();
+
             pCtx.translate(curX, curY);
 
-            // 🌟 VẼ MẶT SÀN KÍNH PHẢN CHIẾU Ở MENU
+            // 🌟 2. VẼ MẶT SÀN KÍNH PHẢN CHIẾU Ở MENU
             let matGrad = pCtx.createLinearGradient(0, pCanvas.height - 100, 0, pCanvas.height);
-            matGrad.addColorStop(0, "#111820"); matGrad.addColorStop(1, "#05080c");
-            pCtx.fillStyle = matGrad; pCtx.fillRect(-50, pCanvas.height - 100, pCanvas.width + 100, 100);
+            matGrad.addColorStop(0, "#0a0f16"); matGrad.addColorStop(1, "#020305");
+            pCtx.fillStyle = matGrad; pCtx.fillRect(-100, pCanvas.height - 100, pCanvas.width + 200, 100);
             
             pCtx.strokeStyle = "rgba(0, 243, 255, 0.5)"; pCtx.lineWidth = 2;
-            pCtx.beginPath(); pCtx.moveTo(-50, pCanvas.height - 100); pCtx.lineTo(pCanvas.width + 100, pCanvas.height - 100); pCtx.stroke();
+            pCtx.beginPath(); pCtx.moveTo(-100, pCanvas.height - 100); pCtx.lineTo(pCanvas.width + 100, pCanvas.height - 100); pCtx.stroke();
 
-            // Ánh sáng Aura rọi xuống sàn kính (Di chuyển ngược nhẹ với nhân vật để tạo 3D)
             if (charStats.auraType && charStats.auraType !== 'none') {
                 let aColor = charStats.auraType === 'fire' ? "#ff4757" : (charStats.auraType === 'god' ? "#f1c40f" : "#00f3ff");
                 let refGrad = pCtx.createRadialGradient(pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 0, pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 150);
-                refGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(aColor):'255,255,255'}, 0.4)`);
+                refGrad.addColorStop(0, `rgba(${window.hexToRgb?window.hexToRgb(aColor):'255,255,255'}, 0.5)`);
                 refGrad.addColorStop(1, "rgba(0,0,0,0)");
                 pCtx.fillStyle = refGrad; pCtx.beginPath(); pCtx.ellipse(pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 150, 40, 0, 0, Math.PI*2); pCtx.fill();
             }
@@ -416,22 +329,47 @@ window.startPreviewLoop = function(charStats) {
             pCtx.translate(pCanvas.width/2, pCanvas.height - 90 + bounce);
             pCtx.scale(1.8, 1.8); 
             
-            let fakeChar = Object.assign({}, charStats, { 
-                x: 0, y: 0, state: 'idle', isFacingRight: false, 
-                hp: 1000, maxHp: 1000 
-            });
+            let fakeChar = Object.assign({}, charStats, { x: 0, y: 0, state: 'idle', isFacingRight: false, hp: 1000, maxHp: 1000 });
             
-            // Thi thoảng tung 1 cú đấm ảo diệu
             if(pTime % 180 > 150) { 
                 fakeChar.state = 'punch'; fakeChar.attackTimer = 15; 
-                if (pTime % 180 === 151 && typeof window.playSound === 'function') {
-                    window.playSound(200, 'sine', 0.1, 0.1); 
-                }
+                if (pTime % 180 === 151 && typeof window.playSound === 'function') window.playSound(200, 'sine', 0.1, 0.1); 
             } 
             
             if(typeof window.drawStickman === 'function') window.drawStickman(pCtx, fakeChar);
             
-            pCtx.restore();
+            pCtx.restore(); // Phục hồi sau khi vẽ nhân vật
+
+            // 🌟 3. VẼ HẠT BỤI LƠ LỬNG BAY VÀO MẶT CAM CÓ PARALLAX MẠNH HƠN
+            pCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            window.menuDustParticles.forEach(d => {
+                d.x += d.vx - (window.mouseX * d.size); // Bụi to trôi nhanh hơn bụi nhỏ tạo chiều sâu 3D cực thực
+                d.y += d.vy - (window.mouseY * d.size);
+                if (d.y < -100) d.y = pCanvas.height + 100;
+                if (d.x < -100) d.x = pCanvas.width + 100;
+                if (d.x > pCanvas.width + 100) d.x = -100;
+
+                pCtx.globalAlpha = d.alpha * (Math.sin(pTime*0.05 + d.x) * 0.5 + 0.5); // Bụi lấp lánh
+                pCtx.beginPath(); pCtx.arc(d.x, d.y, d.size, 0, Math.PI*2); pCtx.fill();
+            });
+            pCtx.globalAlpha = 1.0;
+
+            // 🌟 4. HOLOGRAM GLITCH KHI MỚI CHỌN TƯỚNG
+            if (window.previewGlitchTimer > 0) {
+                window.previewGlitchTimer--;
+                let gPower = window.previewGlitchTimer; // Giảm dần độ mạnh
+                
+                // RGB Split
+                pCtx.globalCompositeOperation = 'screen';
+                pCtx.drawImage(pCanvas, (Math.random()-0.5)*gPower, 0); // Lệch đỏ ngang
+                pCtx.globalCompositeOperation = 'source-over';
+                
+                // Sọc nhiễu
+                pCtx.fillStyle = `rgba(255, 255, 255, ${gPower * 0.01})`;
+                for(let i=0; i<10; i++) {
+                    pCtx.fillRect(0, Math.random()*pCanvas.height, pCanvas.width, Math.random()*10);
+                }
+            }
         }
         pTime++;
         window.previewAnimId = requestAnimationFrame(loop);
