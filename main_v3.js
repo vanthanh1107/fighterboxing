@@ -1,5 +1,5 @@
 // ==========================================
-// MAIN.JS - THE DEFINITIVE ARCADE (V45.0 - PERFECT SHOWCASE)
+// MAIN.JS - THE DEFINITIVE ARCADE (V45.1 - PERFECT SHOWCASE FIX)
 // [ĐỈNH CAO: FULL MAPS, CINEMATIC VS IN-FRAME, 3D PARALLAX MENU, 100% ENGLISH]
 // ==========================================
 
@@ -149,20 +149,22 @@ window.startGame = async function() {
     let q1 = pQuotes[Math.floor(Math.random() * pQuotes.length)];
     let q2 = eQuotes[Math.floor(Math.random() * eQuotes.length)];
 
-    // 1. CÀI ĐẶT LẠI KHUNG GAME ĐỂ ÉP OVERLAY KHÔNG THỂ TRÀN RA NGOÀI
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
     let game = document.getElementById("game-screen"); 
+    
+    // FIX LỖI TREO GAME: Không dùng overflow: hidden trên #game-screen nữa để tránh làm mất canvas
     if(game) {
         game.style.display = "block"; 
-        game.style.position = "relative"; // Bắt buộc để làm gốc tọa độ cho VS Screen
-        game.style.overflow = "hidden";   // QUAN TRỌNG: Cắt bỏ mọi thứ tràn ra khỏi ô game
+        if (window.getComputedStyle(game).position === 'static') {
+            game.style.position = "relative"; 
+        }
     }
 
-    // 2. MÀN HÌNH VS SCREEN IN-FRAME (CHỈ NẰM TRONG Ô GAME)
+    // MÀN HÌNH VS SCREEN IN-FRAME (CHỈ NẰM TRONG Ô GAME)
     let vsDiv = document.createElement("div");
     vsDiv.id = "vs-screen-overlay";
     
-    // Đã thêm top, left, right, bottom và border-radius: inherit để nó vừa khít 100% với ô game
+    // vsDiv tự có overflow: hidden để cắt thẻ chéo, không làm ảnh hưởng đến game
     vsDiv.style.cssText = `position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 99999; background: #000; display: flex; overflow: hidden; border-radius: inherit; box-shadow: inset 0 0 50px rgba(0,0,0,0.8);`;
     
     vsDiv.innerHTML = `
@@ -186,7 +188,6 @@ window.startGame = async function() {
         </style>
     `;
     
-    // Ép buộc chỉ append vào game-screen, nếu không có thì mới nhét vào body (phòng hờ lỗi)
     if(game) {
         game.appendChild(vsDiv); 
     } else {
@@ -204,10 +205,12 @@ window.startGame = async function() {
     
     if (!window.isLoopRunning) { 
         window.isLoopRunning = true; 
+        // Gọi Game Loop để bắt đầu khởi chạy game ở phía dưới
         requestAnimationFrame(window.gameLoopFPS); 
     } 
 
     setTimeout(async () => {
+        // Sau 2.2s bắt đầu mờ khung giới thiệu
         vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
         setTimeout(() => vsDiv.remove(), 300);
     }, 2200);
