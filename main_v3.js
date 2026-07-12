@@ -78,13 +78,14 @@ window.renderCharacterGrid = function() {
             window.enemyGloveImg.crossOrigin = "Anonymous";
             window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
 
+            // ĐÃ FIX: Chữ nhỏ gọn, thêm scroll tránh tràn khung
             if(desc) desc.innerHTML = `
-                <div style="display:flex; flex-direction:column; gap:10px; text-align: left; animation: fadeIn 0.3s ease;">
-                    <span style="font-size:32px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 10px ${activeItem.color || '#f1c40f'};">${activeItem.className}</span>
-                    <span style="color:#fff; font-size:18px;">❤️ Sinh Lực: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
-                    <span style="color:#fff; font-size:18px;">💨 Tốc Độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
-                    <span style="color:#fff; font-size:18px;">✨ Sức Mạnh: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
-                    <span style="color:#00f3ff; font-weight: bold; margin-top: 10px; background: rgba(0, 243, 255, 0.1); padding: 5px 10px; border-radius: 5px; border-left: 4px solid #00f3ff;">🤖 AI AUTO-BATTLER READY</span>
+                <div style="display:flex; flex-direction:column; gap:6px; text-align: left; animation: fadeIn 0.3s ease; max-height: 100%; overflow-y: auto; padding-right: 5px; padding-bottom: 5px;">
+                    <span style="font-size:28px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 10px ${activeItem.color || '#f1c40f'}; margin-bottom: 2px;">${activeItem.className}</span>
+                    <span style="color:#fff; font-size:16px;">❤️ Sinh Lực: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
+                    <span style="color:#fff; font-size:16px;">💨 Tốc Độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
+                    <span style="color:#fff; font-size:16px;">✨ Sức Mạnh: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
+                    <span style="color:#00f3ff; font-size:13px; font-weight: bold; margin-top: 5px; background: rgba(0, 243, 255, 0.1); padding: 5px 8px; border-radius: 5px; border-left: 4px solid #00f3ff; display: inline-block;">🤖 AI AUTO-BATTLER READY</span>
                 </div>`; 
             
             window.startPreviewLoop(activeItem);
@@ -121,19 +122,28 @@ window.startGame = async function() {
     let eChar = window.classStats[randomEnemyId]; 
     let mChar = window.classStats[window.selectedRedClass];
 
-    // 🌟 MÀN HÌNH VS SCREEN OVERLAY
+    // HIỆN KHUNG GAME NGAY LẬP TỨC VÀ ẨN MENU
+    let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
+    let game = document.getElementById("game-screen"); 
+    if(game) { 
+        game.style.display = "block"; 
+        game.style.position = "relative"; // Bắt buộc để nhốt VS Screen vào trong
+    }
+
+    // ĐÃ FIX: TẠO MÀN HÌNH VS SCREEN OVERLAY GỌN TRONG KHUNG GAME
     let vsDiv = document.createElement("div");
     vsDiv.id = "vs-screen-overlay";
-    vsDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: #000; display: flex; overflow: hidden;`;
+    vsDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: #000; display: flex; overflow: hidden;`;
+    
     vsDiv.innerHTML = `
         <div style="flex:1; background: ${mChar.color || '#00f3ff'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-end; align-items: center; padding-right: 15%; animation: slideRight 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: 80px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${mChar.className.toUpperCase()}</h1>
+            <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${mChar.className.toUpperCase()}</h1>
         </div>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-            <h1 style="color: #fff; font-size: 120px; font-family: 'Impact'; font-style: italic; text-shadow: 0 0 30px #000; animation: pulse 0.5s infinite alternate;">VS</h1>
+            <h1 style="color: #fff; font-size: 80px; font-family: 'Impact'; font-style: italic; text-shadow: 0 0 30px #000; animation: pulse 0.5s infinite alternate;">VS</h1>
         </div>
         <div style="flex:1; background: ${eChar.color || '#ff003c'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-start; align-items: center; padding-left: 15%; animation: slideLeft 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: 80px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${eChar.className.toUpperCase()}</h1>
+            <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${eChar.className.toUpperCase()}</h1>
         </div>
         <style>
             @keyframes slideRight { from { transform: skewX(-15deg) scale(1.2) translateX(-100%); } to { transform: skewX(-15deg) scale(1.2) translateX(0); } }
@@ -141,30 +151,31 @@ window.startGame = async function() {
             @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.2); } }
         </style>
     `;
-    document.body.appendChild(vsDiv);
+    
+    if (game) game.appendChild(vsDiv);
+    else document.body.appendChild(vsDiv);
     
     // Hiệu ứng âm thanh Hype
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
     window.announce("Get Ready for the Next Battle!", 0.9);
 
-    // Chờ 1.5 giây rồi xóa VS Screen và vào trận
-    setTimeout(async () => {
+    // KHỞI TẠO TRẬN ĐẤU NGAY PHÍA SAU VS SCREEN
+    await window.matchStartFPS(randomEnemyId); 
+    
+    // Bật game loop để vẽ map và nhân vật chờ sẵn không bị đen thui
+    if (!window.isLoopRunning) { 
+        window.isLoopRunning = true; 
+        requestAnimationFrame(window.gameLoopFPS); 
+    } 
+
+    // CHỜ 1.5 GIÂY RỒI XÓA MÀN HÌNH VS
+    setTimeout(() => {
         vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
         setTimeout(() => vsDiv.remove(), 300);
 
-        let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
-        let game = document.getElementById("game-screen"); if(game) game.style.display = "block"; 
-        
         if (window.bgmBase) { window.bgmBase.pause(); }
         window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
         window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
-
-        await window.matchStartFPS(randomEnemyId); // Truyền ID đã random vào
-        
-        if (!window.isLoopRunning) { 
-            window.isLoopRunning = true; 
-            requestAnimationFrame(window.gameLoopFPS); 
-        } 
     }, 1500);
 }
 
@@ -223,7 +234,7 @@ window.matchStartFPS = async function(randomEnemyId) {
     let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
-    setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); // Announce FIGHT khi chữ FIGHT hiện lên
+    setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); 
 
     if (typeof window.startRecording === 'function') window.startRecording();
 }
@@ -288,7 +299,7 @@ window.punch = function(hand) {
             if(window.spawnDamageNumber) window.spawnDamageNumber(400, 180, "🔥 MEGA SMASH! 🔥", "#f1c40f", true); 
             window.playSound(180, 'sawtooth', 0.6, 0.8, true); if(window.shockwaves) window.shockwaves.push({ x: 400, y: 300, radius: 30, maxRadius: 1000, alpha: 1, speed: 30, thickness: 35, color: "#f1c40f" }); 
             if(window.spawnDebris) window.spawnDebris(e.x, window.GROUND_Y, 40); 
-            window.announce("Ultimate Smash!", 0.7); // B.L.V hô to
+            window.announce("Ultimate Smash!", 0.7); 
         } 
         else if (isPerfectCounter) { dmg = 100 * comboMult; punchColor = "#00f3ff"; window.targetZ += 30; window.hitZoomTimer = 15; window.whiteFlashAlpha = 0.6; window.cameraTilt = 0.15; if(window.spawnDamageNumber) window.spawnDamageNumber(400, 180, "⚔️ TRỪNG PHẠT! ⚔️", "#00f3ff", true); } 
         else { window.playerFPS.rage = Math.min(100, window.playerFPS.rage + 15); if (isCrit) { dmg = Math.floor(dmg * 1.8); punchColor = "#ff4757"; window.hitZoomTimer = 10; window.whiteFlashAlpha = 0.4; window.cameraTilt = (Math.random() > 0.5 ? 0.1 : -0.1); } }
@@ -305,7 +316,7 @@ window.punch = function(hand) {
                 if(window.triggerFatality) window.triggerFatality(e, isRagePunch); 
                 window.spawnParticles(window.canvas.width/2, window.canvas.height/2 - 60, "rgba(220, 0, 0, 0.9)", true); 
                 if(window.spawnScreenBlood) window.spawnScreenBlood(); 
-                window.announce("K.O!", 0.6); // Bình luận viên tuyên bố chiến thắng
+                window.announce("K.O!", 0.6); 
             }
         } else {
             if (isCrit || isRagePunch || isPerfectCounter) { e.state = 'hurt'; e.hitStun = isRagePunch ? 45 : 25; e.attackTimer = 0; e.guardBreakTimer = 0; if (isCrit && window.spawnScreenBlood) window.spawnScreenBlood(); } else { if (e.attackTimer <= 0) { e.state = 'hurt'; e.hitStun = 10; } }
@@ -368,7 +379,7 @@ window.mouseX = 0; window.mouseY = 0;
 
 // Bắt sự kiện chuột để tạo góc nhìn 3D (Parallax)
 document.addEventListener('mousemove', (e) => {
-    window.mouseX = (e.clientX / window.innerWidth) * 2 - 1; // Giá trị từ -1 đến 1
+    window.mouseX = (e.clientX / window.innerWidth) * 2 - 1; 
     window.mouseY = (e.clientY / window.innerHeight) * 2 - 1;
 });
 
@@ -387,14 +398,11 @@ window.startPreviewLoop = function(charStats) {
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
             pCtx.save();
             
-            // Lấy tọa độ 3D Parallax mượt mà (Lerp)
             curX += (window.mouseX * 30 - curX) * 0.1;
             curY += (window.mouseY * 15 - curY) * 0.1;
-
-            // Dời toàn bộ khung cảnh theo chuột
             pCtx.translate(curX, curY);
 
-            // 🌟 VẼ MẶT SÀN KÍNH PHẢN CHIẾU Ở MENU
+            // VẼ MẶT SÀN KÍNH PHẢN CHIẾU Ở MENU
             let matGrad = pCtx.createLinearGradient(0, pCanvas.height - 100, 0, pCanvas.height);
             matGrad.addColorStop(0, "#111820"); matGrad.addColorStop(1, "#05080c");
             pCtx.fillStyle = matGrad; pCtx.fillRect(-50, pCanvas.height - 100, pCanvas.width + 100, 100);
@@ -402,7 +410,6 @@ window.startPreviewLoop = function(charStats) {
             pCtx.strokeStyle = "rgba(0, 243, 255, 0.5)"; pCtx.lineWidth = 2;
             pCtx.beginPath(); pCtx.moveTo(-50, pCanvas.height - 100); pCtx.lineTo(pCanvas.width + 100, pCanvas.height - 100); pCtx.stroke();
 
-            // Ánh sáng Aura rọi xuống sàn kính (Di chuyển ngược nhẹ với nhân vật để tạo 3D)
             if (charStats.auraType && charStats.auraType !== 'none') {
                 let aColor = charStats.auraType === 'fire' ? "#ff4757" : (charStats.auraType === 'god' ? "#f1c40f" : "#00f3ff");
                 let refGrad = pCtx.createRadialGradient(pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 0, pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 150);
@@ -411,11 +418,9 @@ window.startPreviewLoop = function(charStats) {
                 pCtx.fillStyle = refGrad; pCtx.beginPath(); pCtx.ellipse(pCanvas.width/2 - curX*0.5, pCanvas.height - 60, 150, 40, 0, 0, Math.PI*2); pCtx.fill();
             }
 
-            // Nhịp thở
             let bounce = Math.sin(pTime * 0.05) * 5;
             
-            // --- ĐÃ FIX Ở ĐÂY ---
-            // Căn lại trục Y (hạ xuống) và giảm scale để nhân vật hiện rõ mặt
+            // ĐÃ FIX: Hạ thấp tọa độ Y và giảm scale xuống 1.2 để thấy được mặt nhân vật
             pCtx.translate(pCanvas.width/2, pCanvas.height - 30 + bounce);
             pCtx.scale(1.2, 1.2); 
             
@@ -424,7 +429,6 @@ window.startPreviewLoop = function(charStats) {
                 hp: 1000, maxHp: 1000 
             });
             
-            // Thi thoảng tung 1 cú đấm ảo diệu
             if(pTime % 180 > 150) { 
                 fakeChar.state = 'punch'; fakeChar.attackTimer = 15; 
                 if (pTime % 180 === 151 && typeof window.playSound === 'function') {
