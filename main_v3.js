@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - BROADCAST ESPORTS EDITION (V38.0 - BULLETPROOF)
-// [FIX LỖI: KẸT MÀN HÌNH VS, BẢO VỆ LOAD GAME TỐI ĐA CHỐNG CRASH]
+// MAIN.JS - BROADCAST ESPORTS EDITION (FINAL VERSION)
+// [TÍCH HỢP SẴN: LÕI RENDER DỰ PHÒNG CHỐNG ĐEN MÀN HÌNH, ANTI-CRASH]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -13,27 +13,73 @@ window.loadedCharacters = {};
 window.enemyZ = 120; 
 window.targetZ = 120; 
 
-// 🌟 HÀM DỰ PHÒNG CHỐNG ĐEN MÀN HÌNH (Sẽ kích hoạt nếu engine.js quên thêm drawMap)
+// ==========================================
+// 🚀 HỆ THỐNG CỨU HỘ ĐỒ HỌA (CHỐNG ĐEN MÀN HÌNH)
+// ==========================================
+
+// 1. Hàm vẽ Map dự phòng (Tạo chiều sâu 3D)
 window.drawMap = window.drawMap || function(cx, w, h) {
     cx.save();
     let cxX = window.camX || 0; let cxY = window.camY || 0;
+    
+    // Bầu trời
     let bgGrad = cx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, "#1a1a2e"); bgGrad.addColorStop(1, "#16213e"); 
+    bgGrad.addColorStop(0, "#0f172a"); bgGrad.addColorStop(1, "#1e293b"); 
     cx.fillStyle = bgGrad; cx.fillRect(0, 0, w, h);
+    
+    // Mặt trăng
     cx.fillStyle = "rgba(255, 255, 200, 0.8)";
     cx.beginPath(); cx.arc(w/2 - cxX*0.1, 150 - cxY*0.1, 60, 0, Math.PI*2); cx.fill();
-    let midOffset = cxX * 0.4; cx.fillStyle = "#0f3460";
+    
+    // Bối cảnh thành phố phía sau
+    let midOffset = cxX * 0.4; cx.fillStyle = "#020617";
     for(let i = -2; i < 5; i++) {
         let bHeight = 200 + Math.abs(Math.sin(i) * 150);
         cx.fillRect(i * 250 - midOffset + w/2, (window.GROUND_Y || 320) - bHeight - cxY * 0.4, 120, bHeight);
     }
+    
+    // Mặt sàn đấu 3D
     let floorGrad = cx.createLinearGradient(0, (window.GROUND_Y || 320), 0, h);
     floorGrad.addColorStop(0, "#111"); floorGrad.addColorStop(1, "#333");
     cx.fillStyle = floorGrad; cx.fillRect(-w, (window.GROUND_Y || 320) - cxY, w * 3, h);
     cx.restore();
 };
 
-// 🌟 GHI ĐÈ BẢO VỆ VÒNG LẶP CHÍNH (ĐẢM BẢO GAME KHÔNG BAO GIỜ TREO)
+// Ép lõi engine.js dùng drawMap thay vì tô màu đen
+window.drawBoxingRing = window.drawMap;
+
+// 2. Hàm vẽ Kẻ địch dự phòng (Chống tàng hình nhân vật)
+if (typeof window.drawStickman !== 'function') {
+    window.drawStickman = function(ctx, charObj) {
+        ctx.save();
+        ctx.fillStyle = charObj.color || "#ff003c";
+        
+        // Vẽ đầu (Avatar nếu có, không thì hình tròn)
+        if (window.enemyFaceImg && window.enemyFaceImg.complete && window.enemyFaceImg.naturalWidth > 0) {
+            ctx.drawImage(window.enemyFaceImg, -35, -130, 70, 70);
+        } else {
+            ctx.beginPath(); ctx.arc(0, -95, 30, 0, Math.PI * 2); ctx.fill();
+        }
+        
+        // Thân, Vai, Chân
+        ctx.fillRect(-15, -60, 30, 60); // Thân
+        ctx.fillRect(-45, -60, 90, 15); // Vai ngang
+        ctx.fillRect(-20, 0, 15, 50); // Chân trái
+        ctx.fillRect(5, 0, 15, 50);   // Chân phải
+        
+        // Găng tay
+        if (window.enemyGloveImg && window.enemyGloveImg.complete && window.enemyGloveImg.naturalWidth > 0) {
+            ctx.drawImage(window.enemyGloveImg, -60, -70, 30, 30);
+            ctx.drawImage(window.enemyGloveImg, 30, -70, 30, 30);
+        }
+        ctx.restore();
+    };
+}
+
+// ==========================================
+// 🚀 LÕI BẢO VỆ VÀ THIẾT LẬP GAME
+// ==========================================
+
 window.gameLoopFPS = window.gameLoopFPS || function(timestamp) {
     if (!window.isLoopRunning) return;
     requestAnimationFrame(window.gameLoopFPS);
@@ -41,14 +87,13 @@ window.gameLoopFPS = window.gameLoopFPS || function(timestamp) {
     if (!window.lastFrameTime) window.lastFrameTime = timestamp;
     
     let deltaTime = timestamp - window.lastFrameTime;
-    if (deltaTime >= 16) { // ~60fps
+    if (deltaTime >= 16) { 
         window.lastFrameTime = timestamp - (deltaTime % 16);
-        try { if (typeof window.update === 'function') window.update(); } catch(e) { console.error("Lỗi ngầm ở Update:", e); }
-        try { if (typeof window.draw === 'function') window.draw(); } catch(e) { console.error("Lỗi ngầm ở Draw:", e); }
+        try { if (typeof window.update === 'function') window.update(); } catch(e) {}
+        try { if (typeof window.draw === 'function') window.draw(); } catch(e) {}
     }
 };
 
-// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I
 window.announce = function(text, pitch = 0.8) {
     try {
         if (window.isMuted) return;
@@ -59,9 +104,6 @@ window.announce = function(text, pitch = 0.8) {
     } catch(e) {}
 };
 
-// ==========================================
-// 1. KHỞI TẠO VÀ CHỌN TƯỚNG TẠI MENU
-// ==========================================
 window.loadCharacterDynamic = function(charId) {
     return new Promise((resolve) => {
         if (window.classStats && window.classStats[charId]) {
@@ -143,7 +185,6 @@ window.startGame = async function() {
     window.isPreviewRunning = false; 
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     
-    // 🛡️ Lấy thông số an toàn chống lỗi Undefined
     let allKeys = Object.keys(window.classStats || {});
     let randomEnemyId = allKeys.length > 0 ? allKeys[Math.floor(Math.random() * allKeys.length)] : "default";
     await window.loadCharacterDynamic(randomEnemyId);
@@ -182,7 +223,6 @@ window.startGame = async function() {
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
     window.announce("Get Ready for the Next Battle!", 0.9);
 
-    // 🛡️ BẢO ĐẢM XÓA MÀN HÌNH VS BẤT CHẤP LỖI
     setTimeout(() => {
         try {
             if (vsDiv) {
@@ -192,15 +232,10 @@ window.startGame = async function() {
             if (window.bgmBase) { window.bgmBase.pause(); }
             window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
             window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
-        } catch(e) { console.error("Lỗi âm thanh:", e); }
+        } catch(e) {}
     }, 1500);
 
-    // 🛡️ TRY CATCH NẠP MAP, NẾU LỖI THÌ GAME LOOP VẪN CHẠY
-    try {
-        await window.matchStartFPS(randomEnemyId); 
-    } catch(err) {
-        console.error("Lỗi ngầm khi nạp trận đấu:", err);
-    }
+    try { await window.matchStartFPS(randomEnemyId); } catch(err) {}
     
     window.isLoopRunning = true; 
     requestAnimationFrame(window.gameLoopFPS); 
@@ -270,7 +305,7 @@ window.matchStartFPS = async function(randomEnemyId) {
     setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); 
 
     if (typeof window.startRecording === 'function') {
-        try { window.startRecording(); } catch(e) { console.warn("Không thể bật ghi hình:", e); }
+        try { window.startRecording(); } catch(e) {}
     }
 }
 
