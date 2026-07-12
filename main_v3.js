@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - BROADCAST ESPORTS EDITION (V35.0 - THE SHOWCASE)
-// [ĐỈNH CAO: BÌNH LUẬN VIÊN A.I, MÀN HÌNH VS TRANSITION, MENU 3D PARALLAX]
+// MAIN.JS - BROADCAST ESPORTS EDITION (V36.0 - THE SHOWCASE)
+// [FIX LỖI: TRỐNG MÀN HÌNH CHÍNH, BẢO VỆ CRASH RENDER, TRY/CATCH RECORDER]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -16,11 +16,31 @@ window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBl
 window.enemyFaceImg = new Image(); 
 window.enemyGloveImg = new Image(); 
 
-// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I (ANNOUNCER VOICE)
+// 🌟 HÀM DỰ PHÒNG CHỐNG ĐEN MÀN HÌNH (Sẽ kích hoạt nếu engine.js quên thêm drawMap)
+window.drawMap = window.drawMap || function(cx, w, h) {
+    cx.save();
+    let cxX = window.camX || 0; let cxY = window.camY || 0;
+    let bgGrad = cx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, "#1a1a2e"); bgGrad.addColorStop(1, "#16213e"); 
+    cx.fillStyle = bgGrad; cx.fillRect(0, 0, w, h);
+    cx.fillStyle = "rgba(255, 255, 200, 0.8)";
+    cx.beginPath(); cx.arc(w/2 - cxX*0.1, 150 - cxY*0.1, 60, 0, Math.PI*2); cx.fill();
+    let midOffset = cxX * 0.4; cx.fillStyle = "#0f3460";
+    for(let i = -2; i < 5; i++) {
+        let bHeight = 200 + Math.abs(Math.sin(i) * 150);
+        cx.fillRect(i * 250 - midOffset + w/2, (window.GROUND_Y || 320) - bHeight - cxY * 0.4, 120, bHeight);
+    }
+    let floorGrad = cx.createLinearGradient(0, (window.GROUND_Y || 320), 0, h);
+    floorGrad.addColorStop(0, "#111"); floorGrad.addColorStop(1, "#333");
+    cx.fillStyle = floorGrad; cx.fillRect(-w, (window.GROUND_Y || 320) - cxY, w * 3, h);
+    cx.restore();
+};
+
+// 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I
 window.announce = function(text, pitch = 0.8) {
     try {
         if (window.isMuted) return;
-        speechSynthesis.cancel(); // Ngắt câu cũ để hô câu mới cho gắt
+        speechSynthesis.cancel();
         let msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'en-US'; msg.rate = 1.3; msg.pitch = pitch; msg.volume = 0.9;
         speechSynthesis.speak(msg);
@@ -71,14 +91,10 @@ window.renderCharacterGrid = function() {
             await window.loadCharacterDynamic(id);
             let activeItem = window.classStats[id];
             
-            window.enemyFaceImg.crossOrigin = "Anonymous";
-            window.enemyFaceImg.src = activeItem.avatarUrl;
-
+            window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl;
             let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
-            window.enemyGloveImg.crossOrigin = "Anonymous";
-            window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
+            window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
 
-            // ĐÃ FIX: Chữ nhỏ gọn, thêm scroll tránh tràn khung
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:6px; text-align: left; animation: fadeIn 0.3s ease; max-height: 100%; overflow-y: auto; padding-right: 5px; padding-bottom: 5px;">
                     <span style="font-size:28px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 10px ${activeItem.color || '#f1c40f'}; margin-bottom: 2px;">${activeItem.className}</span>
@@ -103,7 +119,7 @@ window.renderCharacterGrid = function() {
 // 2. CHUYỂN CẢNH KỊCH TÍNH (CINEMATIC VS SCREEN)
 // ==========================================
 window.backToMenu = function() { 
-    if (typeof window.stopRecording === 'function') window.stopRecording();
+    if (typeof window.stopRecording === 'function') try { window.stopRecording(); } catch(e){}
     let game = document.getElementById("game-screen"); if(game) game.style.display = "none"; 
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "block"; 
     window.gameOver = true; window.isLoopRunning = false; 
@@ -115,26 +131,19 @@ window.startGame = async function() {
     window.isPreviewRunning = false; 
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     
-    // Đọc thông số đối thủ
     let allKeys = Object.keys(window.classStats);
     let randomEnemyId = allKeys[Math.floor(Math.random() * allKeys.length)];
     await window.loadCharacterDynamic(randomEnemyId);
     let eChar = window.classStats[randomEnemyId]; 
     let mChar = window.classStats[window.selectedRedClass];
 
-    // HIỆN KHUNG GAME NGAY LẬP TỨC VÀ ẨN MENU
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
     let game = document.getElementById("game-screen"); 
-    if(game) { 
-        game.style.display = "block"; 
-        game.style.position = "relative"; // Bắt buộc để nhốt VS Screen vào trong
-    }
+    if(game) { game.style.display = "block"; game.style.position = "relative"; }
 
-    // ĐÃ FIX: TẠO MÀN HÌNH VS SCREEN OVERLAY GỌN TRONG KHUNG GAME
     let vsDiv = document.createElement("div");
     vsDiv.id = "vs-screen-overlay";
     vsDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: #000; display: flex; overflow: hidden;`;
-    
     vsDiv.innerHTML = `
         <div style="flex:1; background: ${mChar.color || '#00f3ff'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-end; align-items: center; padding-right: 15%; animation: slideRight 0.4s ease forwards;">
             <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${mChar.className.toUpperCase()}</h1>
@@ -152,27 +161,19 @@ window.startGame = async function() {
         </style>
     `;
     
-    if (game) game.appendChild(vsDiv);
-    else document.body.appendChild(vsDiv);
-    
-    // Hiệu ứng âm thanh Hype
+    if (game) game.appendChild(vsDiv); else document.body.appendChild(vsDiv);
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
     window.announce("Get Ready for the Next Battle!", 0.9);
 
-    // KHỞI TẠO TRẬN ĐẤU NGAY PHÍA SAU VS SCREEN
     await window.matchStartFPS(randomEnemyId); 
     
-    // Bật game loop để vẽ map và nhân vật chờ sẵn không bị đen thui
-    if (!window.isLoopRunning) { 
-        window.isLoopRunning = true; 
-        requestAnimationFrame(window.gameLoopFPS); 
-    } 
+    // ĐÃ FIX: ÉP GAME LOOP CHẠY NGAY LẬP TỨC ĐỂ KHÔNG BỊ TRỐNG MÀN HÌNH
+    window.isLoopRunning = true; 
+    requestAnimationFrame(window.gameLoopFPS); 
 
-    // CHỜ 1.5 GIÂY RỒI XÓA MÀN HÌNH VS
     setTimeout(() => {
         vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
         setTimeout(() => vsDiv.remove(), 300);
-
         if (window.bgmBase) { window.bgmBase.pause(); }
         window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
         window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
@@ -205,7 +206,7 @@ window.matchStartFPS = async function(randomEnemyId) {
     let eHp = s2.hp || 1000;
     
     window.enemies = [{ 
-        id: "enemy_fps", classId: randomEnemyId, isPlayer: false, x: 400, y: window.GROUND_Y, 
+        id: "enemy_fps", classId: randomEnemyId, isPlayer: false, x: 400, y: window.GROUND_Y || 320, 
         vx: 0, vy: 0, speed: s2.speed || 5, color: s2.color || "#ff003c", hp: eHp, maxHp: eHp, dmgMod: s2.dmgMod || 1, scale: s2.scale || 1, 
         onGround: true, isFacingRight: false, state: 'idle', attackTimer: 0, hitStun: 0, bounceCount: 0,
         className: s2.className, avatarUrl: s2.avatarUrl, drawMethod: s2.drawMethod,
@@ -236,7 +237,10 @@ window.matchStartFPS = async function(randomEnemyId) {
     window.introTimer = 120;
     setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); 
 
-    if (typeof window.startRecording === 'function') window.startRecording();
+    // ĐÃ FIX: Thêm Try Catch bọc lại bộ quay phim, nếu trình duyệt cấm quay thì game vẫn tiếp tục chạy không bị đen thui.
+    if (typeof window.startRecording === 'function') {
+        try { window.startRecording(); } catch(e) { console.warn("Không thể bật ghi hình, bỏ qua lỗi:", e); }
+    }
 }
 
 // ==========================================
@@ -269,7 +273,7 @@ window.punch = function(hand) {
             if(window.shockwaves) window.shockwaves.push({ x: 400, y: 300, radius: 20, maxRadius: 600, alpha: 1, speed: 20, thickness: 15, color: "#fff" });
             if(window.spawnDamageNumber) window.spawnDamageNumber(400, 200, "⚔️ POWER STRUGGLE! ⚔️", "#ffffff", true);
             window.spawnParticles(400, 150, "#f1c40f", true);
-            if(window.spawnDebris) window.spawnDebris(400, window.GROUND_Y, 20);
+            if(window.spawnDebris) window.spawnDebris(400, window.GROUND_Y || 320, 20);
             return; 
         }
 
@@ -298,7 +302,7 @@ window.punch = function(hand) {
             window.hitZoomTimer = 40; window.speedLinesAlpha = 1.0; window.blackoutTimer = 25; window.cameraTilt = (Math.random() > 0.5 ? 0.3 : -0.3); 
             if(window.spawnDamageNumber) window.spawnDamageNumber(400, 180, "🔥 MEGA SMASH! 🔥", "#f1c40f", true); 
             window.playSound(180, 'sawtooth', 0.6, 0.8, true); if(window.shockwaves) window.shockwaves.push({ x: 400, y: 300, radius: 30, maxRadius: 1000, alpha: 1, speed: 30, thickness: 35, color: "#f1c40f" }); 
-            if(window.spawnDebris) window.spawnDebris(e.x, window.GROUND_Y, 40); 
+            if(window.spawnDebris) window.spawnDebris(e.x, window.GROUND_Y || 320, 40); 
             window.announce("Ultimate Smash!", 0.7); 
         } 
         else if (isPerfectCounter) { dmg = 100 * comboMult; punchColor = "#00f3ff"; window.targetZ += 30; window.hitZoomTimer = 15; window.whiteFlashAlpha = 0.6; window.cameraTilt = 0.15; if(window.spawnDamageNumber) window.spawnDamageNumber(400, 180, "⚔️ TRỪNG PHẠT! ⚔️", "#00f3ff", true); } 
@@ -377,7 +381,6 @@ window.dodgeFPS = function() {
 window.previewAnimId = null;
 window.mouseX = 0; window.mouseY = 0;
 
-// Bắt sự kiện chuột để tạo góc nhìn 3D (Parallax)
 document.addEventListener('mousemove', (e) => {
     window.mouseX = (e.clientX / window.innerWidth) * 2 - 1; 
     window.mouseY = (e.clientY / window.innerHeight) * 2 - 1;
@@ -387,8 +390,7 @@ window.startPreviewLoop = function(charStats) {
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     window.isPreviewRunning = true;
     
-    let pTime = 0;
-    let curX = 0, curY = 0;
+    let pTime = 0; let curX = 0, curY = 0;
 
     const loop = () => {
         if (!window.isPreviewRunning) return;
@@ -402,7 +404,6 @@ window.startPreviewLoop = function(charStats) {
             curY += (window.mouseY * 15 - curY) * 0.1;
             pCtx.translate(curX, curY);
 
-            // VẼ MẶT SÀN KÍNH PHẢN CHIẾU Ở MENU
             let matGrad = pCtx.createLinearGradient(0, pCanvas.height - 100, 0, pCanvas.height);
             matGrad.addColorStop(0, "#111820"); matGrad.addColorStop(1, "#05080c");
             pCtx.fillStyle = matGrad; pCtx.fillRect(-50, pCanvas.height - 100, pCanvas.width + 100, 100);
@@ -419,14 +420,11 @@ window.startPreviewLoop = function(charStats) {
             }
 
             let bounce = Math.sin(pTime * 0.05) * 5;
-            
-            // ĐÃ FIX: Hạ thấp tọa độ Y và giảm scale xuống 1.2 để thấy được mặt nhân vật
             pCtx.translate(pCanvas.width/2, pCanvas.height - 30 + bounce);
             pCtx.scale(1.2, 1.2); 
             
             let fakeChar = Object.assign({}, charStats, { 
-                x: 0, y: 0, state: 'idle', isFacingRight: false, 
-                hp: 1000, maxHp: 1000 
+                x: 0, y: 0, state: 'idle', isFacingRight: false, hp: 1000, maxHp: 1000 
             });
             
             if(pTime % 180 > 150) { 
@@ -435,9 +433,7 @@ window.startPreviewLoop = function(charStats) {
                     window.playSound(200, 'sine', 0.1, 0.1); 
                 }
             } 
-            
             if(typeof window.drawStickman === 'function') window.drawStickman(pCtx, fakeChar);
-            
             pCtx.restore();
         }
         pTime++;
