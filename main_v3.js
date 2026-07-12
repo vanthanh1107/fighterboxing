@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - BROADCAST ESPORTS EDITION (V36.0 - THE SHOWCASE)
-// [FIX LỖI: TRỐNG MÀN HÌNH CHÍNH, BẢO VỆ CRASH RENDER, TRY/CATCH RECORDER]
+// MAIN.JS - BROADCAST ESPORTS EDITION (V37.0 - ANTI-CRASH)
+// [FIX LỖI: TREO MÀN HÌNH FIGHT, BẢO VỆ VÒNG LẶP CHÍNH, CHỐNG CRASH NGẦM]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -12,9 +12,6 @@ window.BGM_BASE_POOL = [
 window.loadedCharacters = {}; 
 window.enemyZ = 120; 
 window.targetZ = 120; 
-window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, isDodging: false, isBlocking: false, attackCooldown: 0 };
-window.enemyFaceImg = new Image(); 
-window.enemyGloveImg = new Image(); 
 
 // 🌟 HÀM DỰ PHÒNG CHỐNG ĐEN MÀN HÌNH (Sẽ kích hoạt nếu engine.js quên thêm drawMap)
 window.drawMap = window.drawMap || function(cx, w, h) {
@@ -34,6 +31,21 @@ window.drawMap = window.drawMap || function(cx, w, h) {
     floorGrad.addColorStop(0, "#111"); floorGrad.addColorStop(1, "#333");
     cx.fillStyle = floorGrad; cx.fillRect(-w, (window.GROUND_Y || 320) - cxY, w * 3, h);
     cx.restore();
+};
+
+// 🌟 GHI ĐÈ BẢO VỆ VÒNG LẶP CHÍNH (ĐẢM BẢO GAME KHÔNG BAO GIỜ TREO)
+window.gameLoopFPS = function(timestamp) {
+    if (!window.isLoopRunning) return;
+    requestAnimationFrame(window.gameLoopFPS);
+    if (!timestamp) timestamp = performance.now();
+    if (!window.lastFrameTime) window.lastFrameTime = timestamp;
+    
+    let deltaTime = timestamp - window.lastFrameTime;
+    if (deltaTime >= 16) { // ~60fps
+        window.lastFrameTime = timestamp - (deltaTime % 16);
+        try { if (typeof window.update === 'function') window.update(); } catch(e) { console.error("Lỗi ngầm ở Update:", e); }
+        try { if (typeof window.draw === 'function') window.draw(); } catch(e) { console.error("Lỗi ngầm ở Draw:", e); }
+    }
 };
 
 // 🌟 HỆ THỐNG BÌNH LUẬN VIÊN A.I
@@ -91,9 +103,9 @@ window.renderCharacterGrid = function() {
             await window.loadCharacterDynamic(id);
             let activeItem = window.classStats[id];
             
-            window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl;
+            window.enemyFaceImg = new Image(); window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl;
             let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
-            window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
+            window.enemyGloveImg = new Image(); window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
 
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:6px; text-align: left; animation: fadeIn 0.3s ease; max-height: 100%; overflow-y: auto; padding-right: 5px; padding-bottom: 5px;">
@@ -167,7 +179,7 @@ window.startGame = async function() {
 
     await window.matchStartFPS(randomEnemyId); 
     
-    // ĐÃ FIX: ÉP GAME LOOP CHẠY NGAY LẬP TỨC ĐỂ KHÔNG BỊ TRỐNG MÀN HÌNH
+    // Kích hoạt Game Loop
     window.isLoopRunning = true; 
     requestAnimationFrame(window.gameLoopFPS); 
 
@@ -185,20 +197,28 @@ window.matchStartFPS = async function(randomEnemyId) {
     window.enemyZ = 120; window.targetZ = 120; 
     window.camX = 0; window.camY = 0; window.cameraTilt = 0; window.camZoom = 1.0;
     
-    window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, rage: 0, combo: 0, isDodging: false, isBlocking: false, attackCooldown: 0, parryInvuln: 0, guardBreakTimer: 0, clutchUsed: false, clutchActive: false };
+    // ĐẢM BẢO KHỞI TẠO ĐẦY ĐỦ THUỘC TÍNH
+    window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, rage: 0, combo: 0, isDodging: false, isBlocking: false, attackCooldown: 0, parryInvuln: 0, guardBreakTimer: 0, clutchUsed: false, clutchActive: false, moveTimer: 0, dodgeTimer: 0, aiStateTimer: 0 };
     
+    // ĐÃ FIX: Khởi tạo lại TOÀN BỘ mảng để không văng lỗi khi Lõi Vật Lý update
     window.floatingTexts = []; window.particles = []; window.shockwaves = []; window.screenBlood = []; 
     window.bloodPools = []; window.floorSplatters = []; window.glassShards = []; window.debris = [];
+    window.speechBubbles = []; window.weatherParticles = []; // <--- 2 MẢNG THIẾU GÂY TREO GAME Ở ĐÂY
+    
+    window.uiCache = { h1: null, h2: null, initialized: false };
+    window.lastUI = { h1: "", h2: "" };
+
     window.damageFlashAlpha = 0; window.perfectDodgeFlash = 0; window.hitZoomTimer = 0; 
     window.clutchFlashTimer = 0; window.fatalBlowFlash = 0; window.blackoutTimer = 0; window.parryShieldRadius = 0;
     window.speedLinesAlpha = 0; window.heartbeatPhase = 0; window.whiteFlashAlpha = 0; window.clashStruggleTimer = 0; window.destructiveFinishTimer = 0;
+    window.koGlitchTimer = 0;
 
     let crack = document.getElementById("screen-crack"); if(crack) crack.style.opacity = 0;
     
     if (window.MAPS && window.MAPS.length > 0) {
         window.currentMap = window.MAPS[Math.floor(Math.random() * window.MAPS.length)];
         window.currentWeather = window.currentMap.weather || 'none';
-        window.weatherParticles = []; let ptCount = (window.currentWeather === 'none') ? 0 : 150; 
+        let ptCount = (window.currentWeather === 'none') ? 0 : 150; 
         for(let i=0; i<ptCount; i++) { window.weatherParticles.push({ x: Math.random() * 800, y: Math.random() * 500, speed: (window.currentWeather === 'rain') ? 12 + Math.random() * 10 : 2 + Math.random() * 3, size: Math.random() * 3 + 1, ang: Math.random() * Math.PI * 2 }); }
     }
 
@@ -237,9 +257,8 @@ window.matchStartFPS = async function(randomEnemyId) {
     window.introTimer = 120;
     setTimeout(() => { window.announce("FIGHT!", 0.8); }, 2000); 
 
-    // ĐÃ FIX: Thêm Try Catch bọc lại bộ quay phim, nếu trình duyệt cấm quay thì game vẫn tiếp tục chạy không bị đen thui.
     if (typeof window.startRecording === 'function') {
-        try { window.startRecording(); } catch(e) { console.warn("Không thể bật ghi hình, bỏ qua lỗi:", e); }
+        try { window.startRecording(); } catch(e) { console.warn("Không thể bật ghi hình:", e); }
     }
 }
 
