@@ -1,6 +1,6 @@
 // ==========================================
-// RECORDER.JS - PERFECT CINEMATIC EDITION (V5)
-// [SỬA LỖI: TỌA ĐỘ TAY ĐỘNG LỰC HỌC, ÉP XUẤT MP4 CHỐNG LỖI 1 GIÂY]
+// RECORDER.JS - PERFECT CINEMATIC EDITION (V6)
+// [FIX LỖI: CORRUPT FILE, CHỐNG NGỦ ĐÔNG CANVAS, CHUẨN WEBM EDIT ĐƯỢC]
 // ==========================================
 
 window.mediaRecorderH = null; window.recordedChunksH = []; window.recordCanvasH = null; window.recordCtxH = null;
@@ -8,7 +8,7 @@ window.mediaRecorderV = null; window.recordedChunksV = []; window.recordCanvasV 
 
 window.isRecording = false; 
 window.recordAudioDestination = null; 
-window.currentVideoExt = "mp4"; // Ép ưu tiên MP4
+window.currentVideoExt = "webm"; // LUÔN ƯU TIÊN WEBM ĐỂ KHÔNG BỊ LỖI FILE
 window.savedVideos = [];
 window.bgmSourceNode = null;
 
@@ -17,15 +17,15 @@ window.fpsAssets.crack.crossOrigin = "Anonymous";
 window.fpsAssets.crack.src = 'https://cdn-icons-png.flaticon.com/512/3295/3295055.png';
 
 window.initRecorder = function() {
-    // 🌟 SỬA LỖI TRÌNH DUYỆT NGỦ ĐÔNG: Kích thước thật, giấu ngoài màn hình để bắt trình duyệt phải Render
+    // 🌟 FIX LỖI TRÌNH DUYỆT NGỦ ĐÔNG: Giữ Canvas trong Viewport nhưng thu nhỏ 100 lần để trình duyệt bắt buộc phải Render 60FPS
     if (!document.getElementById("hiddenRecordCanvasH")) {
         window.recordCanvasH = document.createElement("canvas"); window.recordCanvasH.id = "hiddenRecordCanvasH"; window.recordCanvasH.width = 1920; window.recordCanvasH.height = 1080;
-        window.recordCanvasH.style.cssText = "position: absolute; top: -3000px; left: -3000px; width: 1920px; height: 1080px; opacity: 0.01; pointer-events: none; z-index: -9999;";
+        window.recordCanvasH.style.cssText = "position: fixed; top: 0; left: 0; width: 1920px; height: 1080px; opacity: 0.001; pointer-events: none; z-index: -9999; transform: scale(0.01); transform-origin: top left;";
         document.body.appendChild(window.recordCanvasH); window.recordCtxH = window.recordCanvasH.getContext("2d");
     }
     if (!document.getElementById("hiddenRecordCanvasV")) {
         window.recordCanvasV = document.createElement("canvas"); window.recordCanvasV.id = "hiddenRecordCanvasV"; window.recordCanvasV.width = 1080; window.recordCanvasV.height = 1920;
-        window.recordCanvasV.style.cssText = "position: absolute; top: -3000px; left: -3000px; width: 1080px; height: 1920px; opacity: 0.01; pointer-events: none; z-index: -9999;";
+        window.recordCanvasV.style.cssText = "position: fixed; top: 0; left: 0; width: 1080px; height: 1920px; opacity: 0.001; pointer-events: none; z-index: -9999; transform: scale(0.01); transform-origin: top left;";
         document.body.appendChild(window.recordCanvasV); window.recordCtxV = window.recordCanvasV.getContext("2d");
     }
 
@@ -72,12 +72,17 @@ window.startRecording = function() {
     videoStreamV.getVideoTracks().forEach(track => combinedStreamV.addTrack(track));
     audioTracks.forEach(track => { combinedStreamH.addTrack(track); combinedStreamV.addTrack(track); });
     
-    // 🌟 SỬA LỖI 1 GIÂY BẰNG CÁCH ƯU TIÊN ÉP MP4 TỐI ĐA
-    let options = { videoBitsPerSecond: 8000000 }; window.currentVideoExt = "mp4";
-    if (MediaRecorder.isTypeSupported('video/mp4')) { options = { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "mp4"; } 
-    else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) { options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "webm"; }
-    else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 8000000 }; window.currentVideoExt = "webm"; }
-    
+    // 🌟 FIX LỖI CHẤT LƯỢNG & ĐỌC FILE: Tăng lên 12Mbps và BẮT BUỘC dùng WEBM
+    let options = {}; window.currentVideoExt = "webm";
+    let mimeToUse = '';
+
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) { mimeToUse = 'video/webm;codecs=vp9,opus'; }
+    else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { mimeToUse = 'video/webm;codecs=vp8,opus'; }
+    else if (MediaRecorder.isTypeSupported('video/webm')) { mimeToUse = 'video/webm'; }
+    else { mimeToUse = 'video/mp4'; window.currentVideoExt = "mp4"; } // Fallback cho Safari IOS
+
+    options = { mimeType: mimeToUse, videoBitsPerSecond: 12000000 }; // 12 Mbps nét căng
+
     try { window.mediaRecorderH = new MediaRecorder(combinedStreamH, options); window.mediaRecorderV = new MediaRecorder(combinedStreamV, options); } 
     catch (e) { window.mediaRecorderH = new MediaRecorder(combinedStreamH); window.mediaRecorderV = new MediaRecorder(combinedStreamV); }
 
@@ -93,9 +98,13 @@ window.startRecording = function() {
         if (stoppedCount === 2) {
             setTimeout(() => {
                 if (window.recordedChunksH.length === 0 || window.recordedChunksV.length === 0) return;
-                let mimeType = window.currentVideoExt === "mp4" ? "video/mp4" : "video/webm";
-                let blobH = new Blob(window.recordedChunksH, { type: mimeType }); let videoUrlH = URL.createObjectURL(blobH);
-                let blobV = new Blob(window.recordedChunksV, { type: mimeType }); let videoUrlV = URL.createObjectURL(blobV);
+                
+                // Sử dụng chính xác mimeType của thiết bị để tạo file Blob
+                let actualMimeH = window.mediaRecorderH.mimeType || mimeToUse;
+                let actualMimeV = window.mediaRecorderV.mimeType || mimeToUse;
+
+                let blobH = new Blob(window.recordedChunksH, { type: actualMimeH }); let videoUrlH = URL.createObjectURL(blobH);
+                let blobV = new Blob(window.recordedChunksV, { type: actualMimeV }); let videoUrlV = URL.createObjectURL(blobV);
 
                 window.savedVideos.push({ 
                     id: Date.now(), urlH: videoUrlH, urlV: videoUrlV, ext: window.currentVideoExt, 
@@ -107,8 +116,6 @@ window.startRecording = function() {
     };
 
     window.mediaRecorderH.onstop = finalizeRecordings; window.mediaRecorderV.onstop = finalizeRecordings;
-    
-    // Ghi file theo khối lớn duy nhất chống lỗi chèn Frame
     window.mediaRecorderH.start(); window.mediaRecorderV.start(); 
 };
 
@@ -156,23 +163,22 @@ window.captureFrames = function() {
 
         ctx.save();
         let gx, gy, rot, size, scaleX = 1;
-        let anchorX, anchorY; // Điểm neo cánh tay từ dưới màn hình lên
+        let anchorX, anchorY;
 
-        // 🌟 TÍNH TÓAN TỌA ĐỘ VÀ ĐIỂM NEO CÁNH TAY TỰ ĐỘNG KHỚP VỚI GÓC CAM
-        if (isH) { // BẢN NGANG 1920x1080
+        if (isH) { 
             size = 500;
             if (isLeft) {
-                anchorX = -100; anchorY = 1200; // Neo góc trái dưới cùng
+                anchorX = -100; anchorY = 1200; 
                 if (state === 'punch') { gx = 800; gy = 550; size = 450; rot = 15; } 
                 else if (state === 'block') { gx = 650; gy = 700; size = 500; rot = 40; } 
                 else { gx = 350; gy = 950; size = 550; rot = 25; } 
             } else {
-                anchorX = 2020; anchorY = 1200; scaleX = -1; // Neo góc phải dưới cùng
+                anchorX = 2020; anchorY = 1200; scaleX = -1; 
                 if (state === 'punch') { gx = 1120; gy = 550; size = 450; rot = -15; }
                 else if (state === 'block') { gx = 1270; gy = 700; size = 500; rot = -40; }
                 else { gx = 1570; gy = 950; size = 550; rot = -25; }
             }
-        } else { // BẢN DỌC TIKTOK 1080x1920
+        } else { 
             size = 400;
             if (isLeft) {
                 anchorX = -50; anchorY = 2000; 
@@ -187,15 +193,14 @@ window.captureFrames = function() {
             }
         }
 
-        // --- 🌟 VẼ CẲNG TAY VẬT LÝ BÁM CHẶT TỪ MÉP MÀN HÌNH ĐẾN GĂNG ---
         let dx = gx - anchorX; 
         let dy = gy - anchorY;
         let angle = Math.atan2(dy, dx);
         
         let perpX = Math.cos(angle + Math.PI/2);
         let perpY = Math.sin(angle + Math.PI/2);
-        let wGlove = size * 0.45; // Bản rộng cổ tay
-        let wBase = size * 0.9;   // Bản rộng bắp tay ở sát mép
+        let wGlove = size * 0.45; 
+        let wBase = size * 0.9;   
 
         let armGrad = ctx.createLinearGradient(anchorX, anchorY, gx, gy);
         armGrad.addColorStop(0, "#8b5a2b"); armGrad.addColorStop(0.5, "#f1c27d"); armGrad.addColorStop(1, "#b87333");
@@ -208,7 +213,6 @@ window.captureFrames = function() {
         ctx.lineTo(anchorX - perpX * wBase/2, anchorY - perpY * wBase/2);
         ctx.fill();
 
-        // Băng quấn quanh cổ tay
         ctx.save();
         ctx.translate(gx - Math.cos(angle)*(size*0.1), gy - Math.sin(angle)*(size*0.1));
         ctx.rotate(angle);
@@ -218,7 +222,6 @@ window.captureFrames = function() {
         ctx.fillRect(-size*0.15, -wGlove/2, size*0.05, wGlove);
         ctx.restore();
 
-        // VẼ ẢNH GĂNG TAY
         ctx.translate(gx, gy); ctx.rotate(rot * Math.PI / 180); ctx.scale(scaleX, 1);
         if (state === 'block') { ctx.shadowBlur = 40; ctx.shadowColor = "#00f3ff"; } else { ctx.shadowBlur = 25; ctx.shadowColor = "rgba(0,0,0,0.8)"; }
         ctx.drawImage(myGloveObj, -size/2, -size/2, size, size);
@@ -228,7 +231,6 @@ window.captureFrames = function() {
     drawGloveImage(ctxH, true, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle')); drawGloveImage(ctxH, true, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
     drawGloveImage(ctxV, false, true, isPunchL ? 'punch' : (isBlockL ? 'block' : 'idle')); drawGloveImage(ctxV, false, false, isPunchR ? 'punch' : (isBlockR ? 'block' : 'idle'));
 
-    // === 4. VẼ VIỀN ĐIỆN ẢNH VÀ HUD ===
     let vignetteH = ctxH.createRadialGradient(960, 540, 500, 960, 540, 1200); vignetteH.addColorStop(0, 'rgba(0,0,0,0)'); vignetteH.addColorStop(1, 'rgba(0,0,0,0.7)'); ctxH.fillStyle = vignetteH; ctxH.fillRect(0, 60, 1920, 960);
     let vignetteV = ctxV.createRadialGradient(540, 960, 400, 540, 960, 1000); vignetteV.addColorStop(0, 'rgba(0,0,0,0)'); vignetteV.addColorStop(1, 'rgba(0,0,0,0.8)'); ctxV.fillStyle = vignetteV; ctxV.fillRect(0, 420, 1080, 1080);
 
