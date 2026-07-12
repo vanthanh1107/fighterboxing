@@ -1,6 +1,6 @@
 // ==========================================
-// MAIN.JS - BROADCAST ESPORTS EDITION (V37.0 - ANTI-CRASH)
-// [FIX LỖI: TREO MÀN HÌNH FIGHT, BẢO VỆ VÒNG LẶP CHÍNH, CHỐNG CRASH NGẦM]
+// MAIN.JS - BROADCAST ESPORTS EDITION (V38.0 - BULLETPROOF)
+// [FIX LỖI: KẸT MÀN HÌNH VS, BẢO VỆ LOAD GAME TỐI ĐA CHỐNG CRASH]
 // ==========================================
 
 window.BGM_BASE_POOL = [
@@ -34,7 +34,7 @@ window.drawMap = window.drawMap || function(cx, w, h) {
 };
 
 // 🌟 GHI ĐÈ BẢO VỆ VÒNG LẶP CHÍNH (ĐẢM BẢO GAME KHÔNG BAO GIỜ TREO)
-window.gameLoopFPS = function(timestamp) {
+window.gameLoopFPS = window.gameLoopFPS || function(timestamp) {
     if (!window.isLoopRunning) return;
     requestAnimationFrame(window.gameLoopFPS);
     if (!timestamp) timestamp = performance.now();
@@ -103,13 +103,13 @@ window.renderCharacterGrid = function() {
             await window.loadCharacterDynamic(id);
             let activeItem = window.classStats[id];
             
-            window.enemyFaceImg = new Image(); window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl;
+            window.enemyFaceImg = new Image(); window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = activeItem.avatarUrl || "";
             let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png';
             window.enemyGloveImg = new Image(); window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = activeItem.gloveUrl || defaultGlove;
 
             if(desc) desc.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:6px; text-align: left; animation: fadeIn 0.3s ease; max-height: 100%; overflow-y: auto; padding-right: 5px; padding-bottom: 5px;">
-                    <span style="font-size:28px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 10px ${activeItem.color || '#f1c40f'}; margin-bottom: 2px;">${activeItem.className}</span>
+                    <span style="font-size:28px; color:${activeItem.color || '#f1c40f'}; font-weight:900; text-transform: uppercase; text-shadow: 0 0 10px ${activeItem.color || '#f1c40f'}; margin-bottom: 2px;">${activeItem.className || 'Unknown'}</span>
                     <span style="color:#fff; font-size:16px;">❤️ Sinh Lực: <strong style="color:#ff4757;">${activeItem.hp || 1000}</strong></span>
                     <span style="color:#fff; font-size:16px;">💨 Tốc Độ: <strong style="color:#3498db;">${activeItem.speed || 5}</strong></span>
                     <span style="color:#fff; font-size:16px;">✨ Sức Mạnh: <strong style="color:#f1c40f;">${(activeItem.dmgMod || 1) * 100}%</strong></span>
@@ -143,11 +143,16 @@ window.startGame = async function() {
     window.isPreviewRunning = false; 
     if (window.previewAnimId) cancelAnimationFrame(window.previewAnimId);
     
-    let allKeys = Object.keys(window.classStats);
-    let randomEnemyId = allKeys[Math.floor(Math.random() * allKeys.length)];
+    // 🛡️ Lấy thông số an toàn chống lỗi Undefined
+    let allKeys = Object.keys(window.classStats || {});
+    let randomEnemyId = allKeys.length > 0 ? allKeys[Math.floor(Math.random() * allKeys.length)] : "default";
     await window.loadCharacterDynamic(randomEnemyId);
-    let eChar = window.classStats[randomEnemyId]; 
-    let mChar = window.classStats[window.selectedRedClass];
+    
+    let eChar = (window.classStats && window.classStats[randomEnemyId]) ? window.classStats[randomEnemyId] : { className: 'Unknown', color: '#ff003c' }; 
+    let mChar = (window.classStats && window.classStats[window.selectedRedClass]) ? window.classStats[window.selectedRedClass] : { className: 'Player', color: '#00f3ff' };
+
+    let eName = (eChar.className || 'Unknown').toUpperCase();
+    let mName = (mChar.className || 'Player').toUpperCase();
 
     let sel = document.getElementById("selection-screen"); if(sel) sel.style.display = "none"; 
     let game = document.getElementById("game-screen"); 
@@ -158,13 +163,13 @@ window.startGame = async function() {
     vsDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: #000; display: flex; overflow: hidden;`;
     vsDiv.innerHTML = `
         <div style="flex:1; background: ${mChar.color || '#00f3ff'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-end; align-items: center; padding-right: 15%; animation: slideRight 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${mChar.className.toUpperCase()}</h1>
+            <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${mName}</h1>
         </div>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
             <h1 style="color: #fff; font-size: 80px; font-family: 'Impact'; font-style: italic; text-shadow: 0 0 30px #000; animation: pulse 0.5s infinite alternate;">VS</h1>
         </div>
         <div style="flex:1; background: ${eChar.color || '#ff003c'}; transform: skewX(-15deg) scale(1.2); display: flex; justify-content: flex-start; align-items: center; padding-left: 15%; animation: slideLeft 0.4s ease forwards;">
-            <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${eChar.className.toUpperCase()}</h1>
+            <h1 style="color: #fff; font-size: 55px; font-family: 'Impact'; font-style: italic; transform: skewX(15deg); text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${eName}</h1>
         </div>
         <style>
             @keyframes slideRight { from { transform: skewX(-15deg) scale(1.2) translateX(-100%); } to { transform: skewX(-15deg) scale(1.2) translateX(0); } }
@@ -177,19 +182,28 @@ window.startGame = async function() {
     if(typeof window.playSound === 'function') window.playSound(150, 'sawtooth', 1.0, 0.8, true);
     window.announce("Get Ready for the Next Battle!", 0.9);
 
-    await window.matchStartFPS(randomEnemyId); 
+    // 🛡️ BẢO ĐẢM XÓA MÀN HÌNH VS BẤT CHẤP LỖI
+    setTimeout(() => {
+        try {
+            if (vsDiv) {
+                vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
+                setTimeout(() => vsDiv.remove(), 300);
+            }
+            if (window.bgmBase) { window.bgmBase.pause(); }
+            window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
+            window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
+        } catch(e) { console.error("Lỗi âm thanh:", e); }
+    }, 1500);
+
+    // 🛡️ TRY CATCH NẠP MAP, NẾU LỖI THÌ GAME LOOP VẪN CHẠY
+    try {
+        await window.matchStartFPS(randomEnemyId); 
+    } catch(err) {
+        console.error("Lỗi ngầm khi nạp trận đấu:", err);
+    }
     
-    // Kích hoạt Game Loop
     window.isLoopRunning = true; 
     requestAnimationFrame(window.gameLoopFPS); 
-
-    setTimeout(() => {
-        vsDiv.style.opacity = 0; vsDiv.style.transition = "opacity 0.3s";
-        setTimeout(() => vsDiv.remove(), 300);
-        if (window.bgmBase) { window.bgmBase.pause(); }
-        window.bgmBase = new Audio(window.BGM_BASE_POOL[Math.floor(Math.random() * window.BGM_BASE_POOL.length)]);
-        window.bgmBase.loop = true; window.bgmBase.volume = 0.3; window.bgmBase.play().catch(e=>{});
-    }, 1500);
 }
 
 window.matchStartFPS = async function(randomEnemyId) {
@@ -197,13 +211,11 @@ window.matchStartFPS = async function(randomEnemyId) {
     window.enemyZ = 120; window.targetZ = 120; 
     window.camX = 0; window.camY = 0; window.cameraTilt = 0; window.camZoom = 1.0;
     
-    // ĐẢM BẢO KHỞI TẠO ĐẦY ĐỦ THUỘC TÍNH
     window.playerFPS = { hp: 1000, maxHp: 1000, stamina: 100, rage: 0, combo: 0, isDodging: false, isBlocking: false, attackCooldown: 0, parryInvuln: 0, guardBreakTimer: 0, clutchUsed: false, clutchActive: false, moveTimer: 0, dodgeTimer: 0, aiStateTimer: 0 };
     
-    // ĐÃ FIX: Khởi tạo lại TOÀN BỘ mảng để không văng lỗi khi Lõi Vật Lý update
     window.floatingTexts = []; window.particles = []; window.shockwaves = []; window.screenBlood = []; 
     window.bloodPools = []; window.floorSplatters = []; window.glassShards = []; window.debris = [];
-    window.speechBubbles = []; window.weatherParticles = []; // <--- 2 MẢNG THIẾU GÂY TREO GAME Ở ĐÂY
+    window.speechBubbles = []; window.weatherParticles = []; 
     
     window.uiCache = { h1: null, h2: null, initialized: false };
     window.lastUI = { h1: "", h2: "" };
@@ -222,18 +234,18 @@ window.matchStartFPS = async function(randomEnemyId) {
         for(let i=0; i<ptCount; i++) { window.weatherParticles.push({ x: Math.random() * 800, y: Math.random() * 500, speed: (window.currentWeather === 'rain') ? 12 + Math.random() * 10 : 2 + Math.random() * 3, size: Math.random() * 3 + 1, ang: Math.random() * Math.PI * 2 }); }
     }
 
-    let s2 = window.classStats[randomEnemyId]; 
+    let s2 = (window.classStats && window.classStats[randomEnemyId]) ? window.classStats[randomEnemyId] : { className: "Enemy", hp: 1000, speed: 5 }; 
     let eHp = s2.hp || 1000;
     
     window.enemies = [{ 
         id: "enemy_fps", classId: randomEnemyId, isPlayer: false, x: 400, y: window.GROUND_Y || 320, 
         vx: 0, vy: 0, speed: s2.speed || 5, color: s2.color || "#ff003c", hp: eHp, maxHp: eHp, dmgMod: s2.dmgMod || 1, scale: s2.scale || 1, 
         onGround: true, isFacingRight: false, state: 'idle', attackTimer: 0, hitStun: 0, bounceCount: 0,
-        className: s2.className, avatarUrl: s2.avatarUrl, drawMethod: s2.drawMethod,
+        className: s2.className || "Enemy", avatarUrl: s2.avatarUrl || "", drawMethod: s2.drawMethod,
         bodyType: s2.bodyType, isShirtless: s2.isShirtless, skinColor: s2.skinColor, hasTattoos: s2.hasTattoos, jerseyColor: s2.jerseyColor, jerseyNumber: s2.jerseyNumber, pantsType: s2.pantsType, pantsColor: s2.pantsColor, shortsColor: s2.shortsColor, socksColor: s2.socksColor, shoesColor: s2.shoesColor, auraType: s2.auraType, glowingEyes: s2.glowingEyes, hasHeadband: s2.hasHeadband, hasChampBelt: s2.hasChampBelt, beltText: s2.beltText
     }];
     
-    let myChar = window.classStats[window.selectedRedClass];
+    let myChar = (window.classStats && window.classStats[window.selectedRedClass]) ? window.classStats[window.selectedRedClass] : { className: "Player", color: "#00f3ff" };
     let myColor = myChar.color || "#ff003c";
     let defaultGlove = 'https://cdn-icons-png.flaticon.com/512/2950/2950586.png'; 
     let myGloveUrl = myChar.gloveUrl || defaultGlove;
@@ -247,11 +259,11 @@ window.matchStartFPS = async function(randomEnemyId) {
         rightGloveEl.style.filter = `drop-shadow(0 25px 20px ${myColor})`;
     }
 
-    window.enemyFaceImg = new Image(); window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = s2.avatarUrl; 
+    window.enemyFaceImg = new Image(); window.enemyFaceImg.crossOrigin = "Anonymous"; window.enemyFaceImg.src = s2.avatarUrl || ""; 
     window.enemyGloveImg = new Image(); window.enemyGloveImg.crossOrigin = "Anonymous"; window.enemyGloveImg.src = s2.gloveUrl || defaultGlove;
 
-    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + s2.className;
-    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + myChar.className; 
+    let nb = document.getElementById("name-display-blue"); if(nb) nb.innerText = "🤖 " + (s2.className || "Enemy");
+    let nR = document.getElementById("name-display-red"); if(nR) nR.innerText = "👤 " + (myChar.className || "Player"); 
     let h1 = document.getElementById("hp-red"), h2 = document.getElementById("hp-blue"); if(h1) h1.style.width = "100%"; if(h2) h2.style.width = "100%";
     
     window.introTimer = 120;
