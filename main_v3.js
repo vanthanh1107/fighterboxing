@@ -413,8 +413,11 @@ window.startPreviewLoop = function(charStats) {
 
             // Nhịp thở
             let bounce = Math.sin(pTime * 0.05) * 5;
-            pCtx.translate(pCanvas.width/2, pCanvas.height - 90 + bounce);
-            pCtx.scale(1.8, 1.8); 
+            
+            // --- ĐÃ FIX Ở ĐÂY ---
+            // Căn lại trục Y (hạ xuống) và giảm scale để nhân vật hiện rõ mặt
+            pCtx.translate(pCanvas.width/2, pCanvas.height - 30 + bounce);
+            pCtx.scale(1.2, 1.2); 
             
             let fakeChar = Object.assign({}, charStats, { 
                 x: 0, y: 0, state: 'idle', isFacingRight: false, 
